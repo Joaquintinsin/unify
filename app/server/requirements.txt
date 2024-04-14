@@ -1,0 +1,4 @@
+Flask
+Flask-CORS
+PyPDF2
+openai==0.28
