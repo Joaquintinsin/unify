@@ -1,0 +1,37 @@
+version: '3.8'
+services:
+  sinatra:
+    build: .
+    ports:
+      - "4567:4567"
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    command: rerun --background --pattern **/*.{rb} ruby app.rb
+    environment:
+      DATABASE_URL: postgres://postgres:password@db:5432/mydatabase
+
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
