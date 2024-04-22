@@ -8,9 +8,10 @@ services:
       - db
     volumes:
       - .:/app
+      - ./public/uploads:/app/public/uploads
     command: rerun --background --pattern **/*.{rb} ruby app.rb
     environment:
-      DATABASE_URL: postgres://postgres:password@db:5432/mydatabase
+      DATABASE_URL: postgres://admin:tad@db:5432/mydatabase
 
   db:
     image: postgres
@@ -22,6 +23,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
 
   pgadmin:
     image: dpage/pgadmin4
@@ -30,8 +32,10 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
+      POSTGRES_USER: postgres
     depends_on:
       - db
 
 volumes:
   postgres_data:
+  unify_documents:

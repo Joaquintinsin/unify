@@ -1,4 +1,7 @@
 source 'https://rubygems.org'
-gem 'sinatra'
+gem 'pg'
 gem 'puma'
 gem 'rerun'
+gem 'sinatra'
+gem 'sinatra-cors'
+gem 'sinatra-contrib'
