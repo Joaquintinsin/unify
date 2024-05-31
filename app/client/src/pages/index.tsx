@@ -1,4 +1,4 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -10,6 +10,29 @@ export default function Home() {
       setFile(event.target.files[0]);
     }
   };
+
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/documents')
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          setError(data.error);
+        } else {
+          setDocuments(data);
+        }
+      })
+      .catch(err => {
+        console.error('Error al cargar los documentos:', err);
+        setError('Error al cargar los documentos');
+      });
+  }, []);
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   const handleSubmit = (event: any) => {
     event.preventDefault();
@@ -34,7 +57,6 @@ export default function Home() {
         setLoading(false);
       });
   };
-
 
   return (
     <div className='h-full w-full bg-gray-100 min-h-screen py-8'>
@@ -64,6 +86,21 @@ export default function Home() {
           <p className="mt-4 text-green-500">
             Documento subido con éxito: {uploadedFileName}
           </p>
+        )}
+
+        {documents.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold">Documentos subidos</h2>
+            <ul>
+              {documents.map((document: any) => (
+                <li key={document.id} className="mt-2">
+                  <a href={document.title} target="_blank" rel="noreferrer">
+                    {document.file_path}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>
