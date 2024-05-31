@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🚀 Deploying Etendo ChatBot UI
 
-## Getting Started
+This is a tutorial on how to deploy the Etendo ChatBot UI application using Docker.
 
-First, run the development server:
+## 🛠️ Installation
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+To run the program locally, execute the following commands:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`yarn install`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`yarn dev`
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+To connect to the backend locally, you can use the following commands:
 
-## Learn More
+`kubectl port-forward -n chat-etendo svc/mlv-server-milvus 19530:19530`
 
-To learn more about Next.js, take a look at the following resources:
+`MILVUS_HOST=localhost MILVUS_PORT=19530 python3 server.py`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This will forward the port of the Milvus server running in the `chat-etendo` namespace to your local machine, and then start the server.py script with the Milvus host and port set to `localhost:19530`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Once you have completed these steps, you should be able to access the Etendo ChatBot UI application and connect to the backend server locally.
 
-## Deploy on Vercel
+Likewise, you can test the program in your browser by navigating to https://chat.etendo.cloud.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🐳 Step 1: Build the Docker image
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+First of all, execute the following command:
+
+`yarn build`
+
+Then, to build the Docker image of the application using the following command:
+
+`docker build -t etendo/chatbot_ui .`
+
+## 🚢 Step 2: Push the Docker image
+
+Push the Docker image to your chosen container registry using the following command:
+
+`docker push etendo/chatbot_ui`

@@ -4,9 +4,14 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.BACKEND_URL}/api/:path*`,
+        destination: "http://localhost:4567/api/:path*",
       },
     ];
+  },
+  i18n: {
+    locales: ["en", "es"],
+    defaultLocale: "en",
+    localeDetection: false,
   },
 };
 

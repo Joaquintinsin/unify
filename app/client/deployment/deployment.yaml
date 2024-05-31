@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-ui
+  namespace: chat-etendo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chatbot-ui
+  template:
+    metadata:
+      labels:
+        app: chatbot-ui
+    spec:
+      containers:
+        - name: chatbot-ui
+          image: etendo/chatbot_ui
+          ports:
+            - containerPort: 3000

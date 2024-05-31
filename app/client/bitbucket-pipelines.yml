@@ -1,0 +1,37 @@
+# Template docker-push
+
+# This template allows you to build and push your docker image to a Docker Hub account.
+# The workflow allows running tests, code linting and security scans on feature branches (as well as master).
+# The docker image will be validated and pushed to the docker registry after the code is merged to master.
+
+# Prerequisites: $DOCKERHUB_USERNAME, $DOCKERHUB_PASSWORD setup as deployment variables
+
+image: node:lts
+pipelines:
+  branches:
+    develop:
+      - step:
+          name: Deploy to Production
+          deployment: Production
+          script:
+            - echo ${DOCKERHUB_PASSWORD} | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - IMAGE=etendo/chatbot_ui:latest
+            - docker build -t ${IMAGE} .
+            - yarn install
+            - yarn build
+            - docker push ${IMAGE}
+          services:
+            - docker
+    experimental:
+      - step:
+          name: Deploy to Experimental
+          deployment: Experimental
+          script:
+            - echo ${DOCKERHUB_PASSWORD} | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - IMAGE=etendo/chatbot_ui:experimental
+            - yarn install
+            - yarn build
+            - docker build -t ${IMAGE} .
+            - docker push ${IMAGE}
+          services:
+            - docker
