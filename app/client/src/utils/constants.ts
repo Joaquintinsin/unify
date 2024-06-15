@@ -93,6 +93,7 @@ export const COPY = "/assets/icons/copy.png";
 export const SEARCH = "/assets/icons/search.png";
 export const WITHOUT_RESULTS = "/assets/without-results.png";
 export const SEND_ARROW = "/assets/icons/send-arrow.png";
+export const CLIP = "/assets/icons/clip.png";
 export const BACKGROUND_POPUP = "/assets/bg-popup.png";
 export const BACKGROUND_POPUP_DARK = "/assets/bg-popup-dark.png";
 export const NEW_CHAT = "/assets/icons/new-chat.png";

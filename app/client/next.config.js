@@ -13,6 +13,15 @@ const nextConfig = {
     defaultLocale: "en",
     localeDetection: false,
   },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/login",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

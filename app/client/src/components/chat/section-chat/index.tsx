@@ -7,6 +7,7 @@ import { DeletedChatsContext } from "@/src/context/DeletedChatsContext";
 import { ChatSearchContext } from "@/src/context/ChatSearchContext";
 import t from "@/lang/locale";
 import {
+  CLIP,
   LIMIT_NUMBER_STANDARD_CONVERSATIONS,
   SCROLL_BUFFER,
   SEARCH,
@@ -159,7 +160,7 @@ const SectionChat = () => {
           const questions = data.questions_and_answers;
           const questionMessages = questions.map((question: any) => ({
             user: "chatbot",
-            message: question.question,
+            message: question.question + "?? ",
             options: question.options,
             answer: question.answer,
             type: "quiz"
@@ -218,22 +219,6 @@ const SectionChat = () => {
   const handleClipClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    }
-  };
-
-  const handleOptionSelect = (option: any) => {
-    setSelectedOption(option);
-  };
-
-  const handleNextQuestion = () => {
-    if (selectedOption === quizQuestions[currentQuestionIndex].answer) {
-      setScore(score + 1);
-    }
-    setSelectedOption(null);
-    if (currentQuestionIndex < quizQuestions?.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      setQuizCompleted(true);
     }
   };
 
@@ -353,53 +338,23 @@ const SectionChat = () => {
 
         {renderChat && quizQuestions?.length > 0 && !quizCompleted && (
           <div>
-            {chatLog.map((message: any, index: number) => {
-              const isUserMessage = message.user === "user";
-              if (isUserMessage) {
-                return (
-                  <UserMessage
-                    message={message.message}
-                    time={""}
-                    key={index}
-                  />
-                );
-              } else if (message.user === "chatbot" && message.type !== "quiz") {
+            {chatLog.map((message: any, index) => {
+              if (message.user === "user") {
+                return <UserMessage key={index} message={message.message} time={""} />;
+              } else if (message.user === "chatbot") {
                 return (
                   <ChatBotMessage
                     key={index}
-                    message={cleanMessage(message.message)}
-                    time={""}
-                    conversationId={message.conversationId}
-                    messageId={message.messageId}
-                    error={message.error}
-                  />
-                );
-              } else if (message.user === "chatbot" && message.type === "quiz") {
-                return (
-                  <div key={index} className="quiz-container">
-                    <div className="question">
-                      {message.message}
-                    </div>
-                    <div className="options">
-                      {message.options.map((option: any, optionIndex: number) => (
-                        <div
-                          key={optionIndex}
-                          className={`option ${selectedOption === option ? "selected" : ""}`}
-                          onClick={() => handleOptionSelect(option)}
-                        >
-                          {option}
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={handleNextQuestion} disabled={!selectedOption}>
-                      Next
-                    </button>
-                  </div>
-                );
+                    message={message.message}
+                    time={message.time}
+                    options={message.options}
+                    type={message.type}
+                  />);
               }
             })}
           </div>
         )}
+
 
         {renderChat && quizQuestions?.length === 0 && (
           <div>
@@ -467,8 +422,8 @@ const SectionChat = () => {
                     onClick={handleClipClick}
                   >
                     <img
-                      className="h-5 w-5 text-gray-400"
-                      src="/path/to/clip-icon.svg" // Reemplaza con la ruta a tu icono de clip
+                      className="h-3 text-gray-400"
+                      src={CLIP}
                       alt="clip icon"
                     />
                   </span>
