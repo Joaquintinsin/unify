@@ -3,17 +3,15 @@ CREATE DATABASE unify;
 
 -- Create the Subjects table
 CREATE TABLE Subjects (
-    ID SERIAL PRIMARY KEY,
-    Name VARCHAR(100) NOT NULL,
-    Description TEXT
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL
 );
 
 -- Create the Documents table
 CREATE TABLE Documents (
-    ID SERIAL PRIMARY KEY,
-    Title VARCHAR(200) NOT NULL,
-    Description TEXT,
-    Creation_Date DATE NOT NULL,
-    File BYTEA,
-    Subject_ID INT REFERENCES Subjects(ID)
+    id SERIAL PRIMARY KEY,
+    subject_id INTEGER REFERENCES Subjects(id),
+    filename VARCHAR(255) NOT NULL,
+    file_content BYTEA,
+    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
