@@ -1,50 +1,33 @@
 import React, { ChangeEvent, useContext, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import UserMessage from "../messages/user-message";
 import ChatBotMessage from "../messages/chatbot-message";
-import { ChatLogContext } from "@/src/context/ChatLogContext";
-import { NewChatContext } from "@/src/context/NewChatContext";
-import { DeletedChatsContext } from "@/src/context/DeletedChatsContext";
-import { ChatSearchContext } from "@/src/context/ChatSearchContext";
 import t from "@/lang/locale";
 import {
   CLIP,
-  LIMIT_NUMBER_STANDARD_CONVERSATIONS,
   SCROLL_BUFFER,
   SEARCH,
   SEND_ARROW,
 } from "@/src/utils/constants";
-import { frequentQuestions, instructions } from "@/src/data";
-import { LoadingChatBotMessageContext } from "@/src/context/LoadingChatBotMessage";
-import { ChatContext } from "@/src/context/ScrollToBottom";
-import { useRouter } from "next/router";
-import { ConversationContext } from "@/src/context/ConversationContext";
+import { subjects, instructions } from "@/src/data";
 import { cleanMessage } from "@/src/utils/functions";
+import { ChatLogContext } from "@/src/context/ChatLogContext";
 import { ChatHistoryContext } from "@/src/context/ChatHistoryContext";
-import { ShowSubscriptionToVersionPremiumPopupContext } from "@/src/context/ShowSubscriptionToVersionPremiumPopupContext";
+import { ChatSearchContext } from "@/src/context/ChatSearchContext";
+import { LoadingChatBotMessageContext } from "@/src/context/LoadingChatBotMessage";
+import { DeletedChatsContext } from "@/src/context/DeletedChatsContext";
+import { NewChatContext } from "@/src/context/NewChatContext";
+import { ChatContext } from "@/src/context/ScrollToBottom";
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+}
 
 const SectionChat = () => {
   const { locale } = useRouter();
-  const { setConversationId, conversationId } = useContext(ConversationContext);
-
-  const [input, setInput] = useState("");
-  const [retryMessage, setRetryMessage] = useState(false);
-  const [userHasScrolled, setUserHasScrolled] = useState(false);
-  const [currentInstruction, setCurrentInstruction] = useState(1);
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [regenerateQuestion, setRegenerateQuestion] = useState(false);
-  const [initializedConversation, setInitializedConversation] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-
-  const [quizQuestions, setQuizQuestions] = useState<any>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [score, setScore] = useState(0);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-
   const { chatHistory } = useContext(ChatHistoryContext);
-  const { setShowSubscriptionToVersionPremium } = useContext(
-    ShowSubscriptionToVersionPremiumPopupContext
-  );
   const { chatSearch, inputChatSearch } = useContext(ChatSearchContext);
   const { setLoadingChatBotMessage } = useContext(LoadingChatBotMessageContext);
   const {
@@ -57,9 +40,134 @@ const SectionChat = () => {
     setIsTypingChatbot,
     setTypingEffect,
   } = useContext(ChatLogContext);
+
+  const [input, setInput] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
+  const [userResponses, setUserResponses] = useState<string[]>([]);
+  const [retryMessage, setRetryMessage] = useState<boolean>(false);
+  const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [userHasScrolled, setUserHasScrolled] = useState<boolean>(false);
+  const [currentInstruction, setCurrentInstruction] = useState<number>(1);
+  const [showInstructions, setShowInstructions] = useState<boolean>(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [initializedConversation, setInitializedConversation] = useState<boolean>(false);
+  const [displayedPDFs, setDisplayedPDFs] = useState<any>({});
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedExamType, setSelectedExamType] = useState(null);
+
+  const displayPDFs = () => {
+    if (!selectedYear || !selectedSubject || !selectedExamType) return null;
+
+    const pdfsToShow = pdfs[selectedYear]?.[selectedSubject]?.[selectedExamType] || [];
+    return (
+      <div className="grid grid-cols-3 gap-4">
+        {pdfsToShow.map((doc, index) => (
+          <div key={index} className="card">
+            <h4>{doc.title}</h4>
+            <p>{doc.description}</p>
+            <a href={doc.url} target="_blank" rel="noopener noreferrer">Ver PDF</a>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+
+
   const { deletedChats } = useContext(DeletedChatsContext);
-  const { newChat, newChatStarted, setNewChatStarted } =
-    useContext(NewChatContext);
+  const { newChat, newChatStarted, setNewChatStarted } = useContext(NewChatContext);
+  const { chatContainerRef } = useContext(ChatContext);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Function to handle answering quiz questions
+  const handleAnswerQuestion = (selectedOption: string) => {
+    // Update user responses
+    const newUserResponses = [...userResponses, selectedOption];
+    setUserResponses(newUserResponses);
+    // Create new user message
+    const newUserMessage = { user: "user", message: selectedOption };
+    // Append to chat log
+    const updatedChatLog = [...chatLog, newUserMessage];
+    // Determine next question or end quiz
+    const nextQuestionIndex = currentQuestionIndex + 1;
+    if (nextQuestionIndex < quizQuestions.length) {
+      const nextQuestion = quizQuestions[nextQuestionIndex];
+      const newQuestionMessage = {
+        user: "chatbot",
+        message: nextQuestion.question,
+        options: nextQuestion.options,
+        type: "quiz"
+      };
+      setChatLog([...updatedChatLog, newQuestionMessage]);
+      setCurrentQuestionIndex(nextQuestionIndex);
+    } else {
+      const finalScore = calculateScore(newUserResponses);
+      console.log("Final score:", finalScore, "/", quizQuestions.length);
+      const completionMessage = {
+        user: "chatbot",
+        message: `Quiz completed! Thank you for participating. Your final score is ${finalScore}/${quizQuestions.length}.`
+      };
+      setChatLog([...updatedChatLog, completionMessage]);
+      setQuizCompleted(true);
+    }
+  };
+
+  // Function to calculate quiz score
+  const calculateScore = (responses: string[]) => {
+    let correctAnswers = 0;
+    quizQuestions.forEach((question, index) => {
+      if (question.answer === responses[index]) {
+        correctAnswers++;
+      }
+    });
+    return correctAnswers;
+  };
+
+  // Filter and display subjects
+  const [showAllSubjects, setShowAllSubjects] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [pdfs, setPDFs] = useState<any[]>([]);  // Assuming we have a way to fetch or determine related PDFs
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch('/api/documents');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("Fetched PDFs:", data);
+      setPDFs(organizePDFs(data));
+    } catch (error) {
+      console.error("Failed to fetch PDFs:", error);
+      setPDFs([]); // Manejar el estado de error adecuadamente
+    }
+  };
+
+  const organizePDFs = (pdfs: any) => {
+    return pdfs.reduce((acc: any, pdf: any) => {
+      const { academic_year, subject, exam_type, title, url, description } = pdf;
+      if (!acc[academic_year]) acc[academic_year] = {};
+      if (!acc[academic_year][subject]) acc[academic_year][subject] = {};
+      if (!acc[academic_year][subject][exam_type]) acc[academic_year][subject][exam_type] = [];
+      acc[academic_year][subject][exam_type].push({ title, url, description });
+      return acc;
+    }, {});
+  };
+
+
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const filteredSubjects = subjects.filter(subject =>
+    subject.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const subjectsToShow = showAllSubjects
+    ? filteredSubjects
+    : filteredSubjects.slice(0, 3);
 
   const shouldRenderSearchResults = chatSearch;
   const shouldShowInstructions =
@@ -69,137 +177,52 @@ const SectionChat = () => {
     (!showInstructions && !inputChatSearch) || newChat || chatLog;
   const renderSearchInput = !deletedChats && !chatSearch;
 
-  const { chatContainerRef } = useContext(ChatContext);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleSubmitMessageChat = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-  useEffect(() => {
-    const handleScroll = (event: any) => {
-      const userScrolledUp =
-        event.target.scrollHeight - event.target.scrollTop >
-        event.target.clientHeight + SCROLL_BUFFER;
-
-      if (userScrolledUp) {
-        setUserHasScrolled(true);
-      } else {
-        setUserHasScrolled(false);
-      }
-    };
-
-    return () => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [chatLog, isTypingChatbot]);
-
-  useEffect(() => {
-    if (chatContainerRef.current && !userHasScrolled) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [chatLog]);
-
-  useEffect(() => {
-    const instrucctionsSeen =
-      localStorage.getItem("instructionsSeen") === "true";
-
-    if (!instrucctionsSeen) {
-      setShowInstructions(true);
-    }
-  }, []);
-
-  const handleSubmitMessageChat: any = async (
-    event: any
-  ) => {
-    if (event) {
-      event.preventDefault();
-    }
-
-    if (chatHistory?.length === LIMIT_NUMBER_STANDARD_CONVERSATIONS) {
-      setShowSubscriptionToVersionPremium(true);
-      return;
-    }
-
-    if (regenerateQuestion) setRegenerateQuestion(false);
+    // Clear previous input and file
+    setInput("");
+    setFile(null);
 
     setTypingEffect(true);
     setIsTypingChatbot(true);
     setLoadingChatBotMessage(true);
 
-    let messageContent = input;
-    if (file) {
-      messageContent = `${input} [Archivo adjunto: ${file.name}]`;
-    }
-
-    let chatLogNew = [...chatLog, { user: "user", message: messageContent }];
-    let loadingChatLogNew = [...chatLogNew, { user: "chatbot", message: "" }];
-    setChatLog(loadingChatLogNew);
-    let newChatLog: any = [...chatLog, { user: "user", message: messageContent }];
-    setInput("");
-    setFile(null);
+    const formData = new FormData();
+    if (input) formData.append("message", input);  // Assuming input is used for something specific
+    if (file) formData.append("file", file);
 
     try {
-      const formData = new FormData();
-      formData.append("message", input);
-      if (file) {
-        formData.append("file", file);
-      }
-      if (conversationId) {
-        formData.append("conversationId", conversationId);
-      }
-
-      fetch('/api/generate-questions', {
+      const response = await fetch('/api/generate-questions', {
         method: 'POST',
         body: formData,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log("Success:", data.questions_and_answers)
-          const questions = data.questions_and_answers;
-          const questionMessages = questions.map((question: any) => ({
-            user: "chatbot",
-            message: question.question + "?? ",
-            options: question.options,
-            answer: question.answer,
-            type: "quiz"
-          }));
-          setQuizQuestions(questions);
-          setChatLog([...newChatLog, ...questionMessages]);
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-        });
+      });
 
-      setChatLog(newChatLog);
-      setLoadingChatBotMessage(false);
-      setIsTypingChatbot(false);
-    } catch (error) {
-      console.error("Error:", error);
+      if (!response.ok) throw new Error("Failed to fetch questions");
 
-      setTimeout(() => {
-        setRegenerateQuestion(true);
-      }, 2500);
+      const data = await response.json();
+      console.log("Success:", data.questions_and_answers);
+      const questions = data.questions_and_answers;
 
-      const failedMessage = {
+      const firstQuestion = questions[0];
+      const firstQuestionMessage = {
         user: "chatbot",
-        message: t(locale, "Error"),
-        conversationId: undefined,
-        messageId: undefined,
-        error: true,
+        message: firstQuestion.question,
+        options: firstQuestion.options,
+        type: "quiz"
       };
 
-      newChatLog.push(failedMessage);
+      setQuizQuestions(questions);
+      setChatLog([firstQuestionMessage]);  // Start chat with the first question
+      setCurrentQuestionIndex(0);
+    } catch (error) {
+      console.error('Error:', error);
+      setChatLog([{ user: "chatbot", message: t(locale, "Error fetching questions") }]);
     }
-  };
 
-  useEffect(() => {
-    if (retryMessage) {
-      handleSubmitMessageChat();
-      setRetryMessage(false);
-    }
-  }, [chatLog]);
+    setIsTypingChatbot(false);
+    setLoadingChatBotMessage(false);
+  };
 
   const handleNextInstruction = () => {
     if (currentInstruction <= instructions.length) {
@@ -222,11 +245,23 @@ const SectionChat = () => {
     }
   };
 
+  const [topics, setTopics] = useState([]);
+
+  const handleSubjectSelect = (subject) => {
+    setSelectedSubject(subject);
+    const relatedPDFs = pdfs?.[subject] || {};
+    setDisplayedPDFs(relatedPDFs);
+  };
+
+
   useEffect(() => {
-    if (quizCompleted) {
-      alert(`Quiz completed! Your score is ${score}/${quizQuestions?.length}`);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
-  }, [quizCompleted, score, quizQuestions?.length]);
+  }, [chatLog]);
 
   return (
     <div className="relative h-[100%] dark:bg-black-800">
@@ -262,9 +297,9 @@ const SectionChat = () => {
             <div className="mt-3 h-full w-full rounded-lg border border-gray-300 dark:border-black-800">
               {instructions(t, locale)
                 .slice(0, currentInstruction)
-                .map((instruction) => (
+                .map((instruction, index) => (
                   <div
-                    key={instruction.instruction}
+                    key={index}
                     className="flex items-center border-b border-gray-300 dark:border-black-800"
                   >
                     <div className="flex items-center gap-4 py-3 px-5">
@@ -309,14 +344,22 @@ const SectionChat = () => {
               {t(locale, "WriteQuestions")}
             </p>
 
-            {frequentQuestions(t, locale).map((question, index) => (
+            <input
+              type="text"
+              placeholder="Buscar materias"
+              value={searchTerm}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+              className="mb-4 w-full rounded-lg border bg-gray-200 p-2 text-gray-800 dark:bg-black-700 dark:text-white"
+            />
+
+            {subjectsToShow.map((subject, index) => (
               <div
                 key={index}
-                className={`gray flex cursor-pointer items-center rounded-lg border bg-gray-300 py-5 px-10 text-gray-600 dark:border-black-800 dark:bg-black-600 dark:text-white ${index === frequentQuestions.length ? "" : "mb-4"
+                onClick={() => handleSubjectSelect(subject)}
+                className={`gray flex cursor-pointer items-center rounded-lg border bg-gray-300 py-5 px-10 text-gray-600 dark:border-black-800 dark:bg-black-600 dark:text-white ${index === subjectsToShow.length ? "" : "mb-4"
                   }`}
-                onClick={() => setInput(question.question)}
               >
-                {question.question} &nbsp;
+                {subject} &nbsp;
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -333,25 +376,23 @@ const SectionChat = () => {
                 </svg>
               </div>
             ))}
+
+            {displayPDFs()}
+
           </div>
         )}
 
-        {renderChat && quizQuestions?.length > 0 && !quizCompleted && (
-          <div>
-            {chatLog.map((message: any, index) => {
-              if (message.user === "user") {
-                return <UserMessage key={index} message={message.message} time={""} />;
-              } else if (message.user === "chatbot") {
-                return (
-                  <ChatBotMessage
-                    key={index}
-                    message={message.message}
-                    time={message.time}
-                    options={message.options}
-                    type={message.type}
-                  />);
-              }
-            })}
+        {renderChat && quizQuestions?.length > 0 && (
+          <div className="relative h-full overflow-y-scroll p-5 dark:bg-black-800" ref={chatContainerRef}>
+            {chatLog.map((entry: any, index: number) => (
+              <div key={index}>
+                {entry.user === "user" ? (
+                  <UserMessage message={entry.message} />
+                ) : (
+                  <ChatBotMessage message={entry.message} options={entry.options} onAnswer={handleAnswerQuestion} time={undefined} type={undefined} />
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -390,7 +431,7 @@ const SectionChat = () => {
           <div className="h-[10%] w-full dark:bg-black-800">
             <div className="relative mx-5">
               <form
-                onSubmit={(event) => {
+                onSubmit={(event: React.FormEvent) => {
                   event.preventDefault();
 
                   if (chatAvailable) {
@@ -433,13 +474,13 @@ const SectionChat = () => {
                     type="text"
                     placeholder={file ? file.name : t(locale, "WriteSomething")}
                     value={input}
-                    onChange={(event) => setInput(event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => setInput(event.target.value)}
                   />
                 </div>
 
                 <button
                   className={`absolute right-0 top-0 flex h-full items-center gap-2 pr-5 cursor-pointer`}
-                  onClick={(event) => {
+                  onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                     handleSubmitMessageChat(event);
                   }}
                   disabled={!chatAvailable}
