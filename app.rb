@@ -160,13 +160,20 @@ post '/api/users' do
   profilePicture = params[:profilePicture]
   email = params[:email]
 
+  # Validación básica de los parámetros
+  halt 400, { error: 'Missing parameters' }.to_json unless username && profilePicture && email
+
   db_connection do |conn|
-    countRowsQuery = conn.exec('SELECT * FROM Users WHERE email == $1', [email]).count
-    if countRowsQuery > 0
-      return true
-    else
-      insert_query = conn.exec('INSERT INTO Users (email, username, profilePicture) VALUES ($1, $2, $3)', [email, username, profilePicture])
-      return insert_query.count > 0
+    conn.transaction do |conn|
+      count_rows_query = conn.exec_params('SELECT COUNT(*) FROM Users WHERE email = $1', [email]).getvalue(0, 0).to_i
+      if count_rows_query == 0
+        conn.exec_params('INSERT INTO Users (email, username, profilePicture) VALUES ($1, $2, $3)', 
+                         [email, username, profilePicture])
+        status 201
+        { message: 'User created successfully' }.to_json
+      else
+        halt 409, { error: 'Email already exists' }.to_json
+      end
     end
   end
 end
