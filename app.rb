@@ -29,10 +29,6 @@ OpenAI.configure do |config|
   config.access_token = ""
 end
 
-get '/api/hello' do
-  json message: 'Hello World'
-end
-
 post '/api/generate-questions' do
   logger.info "Received request to generate quiz"
   logger.info "Params: #{params.inspect}"
@@ -159,6 +155,26 @@ def extract_text_from_image(image)
   RTesseract.new(image.path).to_s
 end
 
+post '/api/users' do
+  username = params[:username]
+  profilePicture = params[:profilePicture]
+  email = params[:email]
+
+  db_connection do |conn|
+    countRowsQuery = conn.exec('SELECT * FROM Users WHERE email == $1', [email]).count
+    if countRowsQuery > 0
+      return true
+    else
+      insert_query = conn.exec('INSERT INTO Users (email, username, profilePicture) VALUES ($1, $2, $3)', [email, username, profilePicture])
+      return insert_query.count > 0
+    end
+  end
+end
+
+post '/api/logout' do
+  redirect '/login'
+end
+
 helpers do
   def db_connection
     begin
@@ -205,8 +221,4 @@ get '/api/documents' do
 
   content_type :json
   json documents
-end
-
-get '/' do
-  "Hello, World!"
 end
