@@ -11,4 +11,36 @@ export default NextAuth({
     session: {
         maxAge: 30 * 24 * 60 * 60,
     },
+    callbacks: {
+        async signIn({ user, account }: any) {
+            if (account.provider === "google") {
+                const { name, email, image } = user;
+                try {
+                    const res = await fetch(`${process.env.BACKEND_URL}/api/users`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            username: name,
+                            email: email,
+                            profilePicture: image,
+                        }),
+                    });
+
+                    if (!res.ok) {
+                        throw new Error("Failed to create user");
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error("Error in signIn callback:", error);
+                    return false;
+                }
+            }
+
+            return true;
+        },
+    },
+    secret: "secret_1",
 });
