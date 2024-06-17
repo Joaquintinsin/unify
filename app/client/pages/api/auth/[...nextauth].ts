@@ -16,7 +16,7 @@ export default NextAuth({
             if (account.provider === "google") {
                 const { name, email, image } = user;
                 try {
-                    const res = await fetch(`${process.env.BACKEND_URL}/api/users`, {
+                    const res = await fetch(${process.env.BACKEND_URL}/api/users, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -27,6 +27,12 @@ export default NextAuth({
                             profilePicture: image,
                         }),
                     });
+
+                    console.log("res", res);
+
+                    if (res.status === 409) {
+                        return true;
+                    }
 
                     if (!res.ok) {
                         throw new Error("Failed to create user");
@@ -41,6 +47,9 @@ export default NextAuth({
 
             return true;
         },
+        async redirect({ url, baseUrl }) {
+            return baseUrl + "/chat";
+        }
     },
-    secret: "secret_1",
+    secret: process.env.NEXTAUTH_SECRET,
 });
