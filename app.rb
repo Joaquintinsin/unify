@@ -7,6 +7,7 @@ require 'dotenv/load'
 require 'pdf-reader'
 require 'openai'
 require 'base64'
+require 'open-uri'
 
 set :cors, true
 set :allow_origin, "http://localhost:3000"
@@ -34,23 +35,36 @@ end
 
 post '/api/generate-questions' do
   logger.info "Received request to generate quiz"
+  logger.info "Params: #{params.inspect}"
 
-  unless params[:file] && params[:file][:tempfile]
-    logger.error "No file provided"
-    status 400
-    return json error: 'No file provided'
+  file = nil
+
+  if params[:file] && params[:file][:tempfile]
+    file = params[:file][:tempfile]
+    logger.info "Successfully received file from tempfile"
+  elsif params[:url]
+    begin
+      file = URI.open(params[:url])
+      logger.info "Successfully opened file from URL"
+    rescue => e
+      logger.error "Failed to open file from URL: #{e.message}"
+      status 400
+      return json error: 'Failed to open file from URL'
+    end
   end
 
-  file = params[:file][:tempfile]
+  if file.nil?
+    logger.error "No file or URL provided"
+    status 400
+    return json error: 'No file or URL provided'
+  end
 
-  begin
-    reader = PDF::Reader.new(file)
-    full_text = reader.pages.map(&:text).join("\n")
-    logger.info "Successfully read PDF file"
-  rescue => e
-    logger.error "Failed to read PDF file: #{e.message}"
+  full_text = extract_text_from_pdf(file)
+
+  if full_text.empty?
+    logger.error "Failed to extract text from PDF"
     status 500
-    return json error: e.message
+    return json error: 'Failed to extract text from PDF'
   end
 
   structured_prompt = """
@@ -63,7 +77,7 @@ post '/api/generate-questions' do
     client = OpenAI::Client.new
     response = client.chat(
       parameters: {
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o", # Usa el modelo con capacidad de visión
         messages: [
           { role: "system", content: structured_prompt },
           { role: "user", content: full_text }
@@ -74,26 +88,20 @@ post '/api/generate-questions' do
     )
 
     logger.info "Received response from OpenAI"
+    logger.info "Response: #{response.inspect}"
 
     response_content = response['choices'][0]['message']['content'].strip
+    # Eliminar el bloque de código delimitador si existe
+    response_content.gsub!(/^```json\n/, '')
+    response_content.gsub!(/\n```$/, '')
 
-    # Intentar formatear la respuesta para asegurar que sea un JSON válido
-    if response_content.start_with?('[') && response_content.end_with?(']')
-      begin
-        structured_response = JSON.parse(response_content)
-        logger.info "Successfully parsed response into JSON"
-      rescue JSON::ParserError => e
-        logger.error "Failed to parse response into JSON: #{e.message}"
-        status 500
-        return json error: 'Failed to parse response into JSON'
-      end
-    else
-      logger.error "Response is not a valid JSON array"
-      status 500
-      return json error: 'Response is not a valid JSON array'
-    end
+    structured_response = JSON.parse(response_content)
 
     json questions_and_answers: structured_response
+  rescue JSON::ParserError => e
+    logger.error "Failed to parse JSON response: #{e.message}"
+    status 500
+    return json error: 'Failed to parse JSON response'
   rescue => e
     logger.error "Failed to generate quiz: #{e.message}"
     status 500
@@ -101,41 +109,54 @@ post '/api/generate-questions' do
   end
 end
 
-get '/api/pdfs' do
-  content_type :json
+def extract_text_from_pdf(file)
+  text = ""
+  reader = nil
 
-  pdfs = db_connection do |conn|
-    # Seleccionamos solo algunos campos relevantes para no sobrecargar la respuesta
-    result = conn.exec('SELECT id, file_name, year_level, subject, exam_type FROM pdf_files;')
-    result.map do |row|
-      {
-        id: row['id'],
-        file_name: row['file_name'],
-        year_level: row['year_level'],
-        subject: row['subject'],
-        exam_type: row['exam_type']
-      }
+  begin
+    reader = PDF::Reader.new(file)
+    reader.pages.each do |page|
+      text << page.text
+    end
+  rescue => e
+    logger.error "Direct PDF text extraction failed: #{e.message}"
+  end
+
+  if text.strip.empty?
+    logger.info "Attempting OCR extraction as fallback"
+    begin
+      images = pdf_to_images(file)
+      images.each do |image|
+        ocr_text = extract_text_from_image(image)
+        text << ocr_text
+      end
+    rescue => ocr_error
+      logger.error "OCR text extraction failed: #{ocr_error.message}"
     end
   end
 
-  json pdfs
+  if text.strip.empty?
+    logger.warn "No text could be extracted from the PDF"
+    text = "No se pudo extraer texto del archivo PDF."
+  end
+
+  text
 end
 
-get '/api/pdf/:id' do
-  content_type 'application/pdf'
-
-  pdf = db_connection do |conn|
-    # Asegúrate de seleccionar la columna que contiene el contenido binario del PDF
-    result = conn.exec_params('SELECT pdf_content FROM pdf_files WHERE id = $1', [params[:id]])
-    result.getvalue(0, 0) if result.ntuples > 0
+def pdf_to_images(file)
+  images = []
+  MiniMagick::Tool::Convert.new do |convert|
+    convert.density 300
+    convert << file.path
+    convert << 'png:-'
+  end.each_frame do |frame|
+    images << frame
   end
+  images
+end
 
-  if pdf
-    response.write(pdf)
-  else
-    status 404
-    json error: "PDF not found."
-  end
+def extract_text_from_image(image)
+  RTesseract.new(image.path).to_s
 end
 
 helpers do
@@ -167,32 +188,9 @@ helpers do
   end
 end
 
-post '/api/uploads' do
-  logger.info "Received file upload request ----- :)"
-  if params[:file].nil? || params[:file][:tempfile].nil?
-    logger.error "No file was uploaded"
-    status 400
-    return json error: 'No file was uploaded.'
-  end
-
-  file_path = save_file(params[:file])
-  logger.info "File saved to #{file_path}"
-
-  if file_path
-    db_connection do |conn|
-      conn.exec_params("INSERT INTO documents (title, file_path) VALUES ($1, $2)", ['Documento de Ejemplo', file_path])
-    end
-    json path: file_path
-  else
-    status 500
-    json error: 'Failed to save the file.'
-  end
-end
-
 get '/api/documents' do
   documents = db_connection do |conn|
-    # Modifico la consulta para incluir la columna 'pdf_content'
-    result = conn.exec('SELECT id, academic_year, subject, exam_type, file_name, pdf_content FROM document ORDER BY academic_year, subject, exam_type;')
+    result = conn.exec('SELECT id, academic_year, subject, exam_type, file_name, document_url FROM document ORDER BY academic_year, subject, exam_type;')
     result.map do |row|
       {
         id: row['id'],
@@ -200,24 +198,13 @@ get '/api/documents' do
         subject: row['subject'],
         exam_type: row['exam_type'],
         file_name: row['file_name'],
-        pdf_content: Base64.strict_encode64(row['pdf_content'])
+        document_url: row['document_url']
       }
     end
   end
 
   content_type :json
   json documents
-end
-
-
-
-
-
-get '/users' do
-  db_connection do |conn|
-    result = conn.exec('SELECT * FROM users;')
-    json result.map { |row| row }
-  end
 end
 
 get '/' do

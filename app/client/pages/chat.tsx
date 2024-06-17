@@ -44,9 +44,6 @@ const providers = [
 
 // Home function component
 export default function Home() {
-  // Next.js router
-  const router = useRouter();
-
   // Wrapping the app with all the context providers
   const App = providers.reduceRight(
     (WrappedComponent, Provider) => {
@@ -57,11 +54,10 @@ export default function Home() {
       <ShareChatPopup />
       <SubscriptionToVersionPremiumPopup />
 
-      <main className="relative h-screen w-screen overflow-hidden">
+      <main className="relative w-screen">
         <UserNavbar />
 
-        <div className="relative flex h-[90%]">
-          <Sidebar />
+        <div className="relative">
           <Chat />
         </div>
       </main>
