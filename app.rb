@@ -156,15 +156,23 @@ def extract_text_from_image(image)
 end
 
 post '/api/users' do
-  username = params[:username]
-  profilePicture = params[:profilePicture]
-  email = params[:email]
+  content_type :json
+
+  request.body.rewind
+  request_payload = JSON.parse(request.body.read)
+
+  username = request_payload['username']
+  profilePicture = request_payload['profilePicture']
+  email = request_payload['email']
+
+  logger.info "Received request to create user"
+  logger.info "Params: #{request_payload.inspect}"
 
   # Validación básica de los parámetros
   halt 400, { error: 'Missing parameters' }.to_json unless username && profilePicture && email
 
   db_connection do |conn|
-    conn.transaction do |conn|
+    conn.transaction do
       count_rows_query = conn.exec_params('SELECT COUNT(*) FROM Users WHERE email = $1', [email]).getvalue(0, 0).to_i
       if count_rows_query == 0
         conn.exec_params('INSERT INTO Users (email, username, profilePicture) VALUES ($1, $2, $3)', 
