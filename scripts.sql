@@ -15,3 +15,10 @@ CREATE TABLE Documents (
     file_content BYTEA,
     upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create the Users table
+CREATE TABLE Users (
+    email VARCHAR(100) PRIMARY KEY,
+    username VARCHAR(100),
+    profilePicture BYTEA
+);
