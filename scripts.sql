@@ -1,24 +1,19 @@
 -- Create Database
 CREATE DATABASE unify;
 
--- Create the Subjects table
-CREATE TABLE Subjects (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL
-);
-
 -- Create the Documents table
-CREATE TABLE Documents (
+CREATE TABLE document (
     id SERIAL PRIMARY KEY,
-    subject_id INTEGER REFERENCES Subjects(id),
-    filename VARCHAR(255) NOT NULL,
-    file_content BYTEA,
-    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    academic_year VARCHAR(255),
+    subject VARCHAR(255),
+    exam_type VARCHAR(255),
+    file_name VARCHAR(255),
+    document_url VARCHAR(1024)
 );
 
 -- Create the Users table
 CREATE TABLE Users (
     email VARCHAR(100) PRIMARY KEY,
     username VARCHAR(100),
-    profilePicture BYTEA
+    profilePicture VARCHAR(100)
 );
