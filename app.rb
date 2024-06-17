@@ -6,6 +6,7 @@ require 'fileutils'
 require 'dotenv/load'
 require 'pdf-reader'
 require 'openai'
+require 'base64'
 
 set :cors, true
 set :allow_origin, "http://localhost:3000"
@@ -74,17 +75,22 @@ post '/api/generate-questions' do
 
     logger.info "Received response from OpenAI"
 
-    response_content = response['choices'][0]['message']['content']
+    response_content = response['choices'][0]['message']['content'].strip
 
-    puts response_content
-
-    begin
-      structured_response = JSON.parse(response_content)
-      logger.info "Successfully parsed response into JSON"
-    rescue JSON::ParserError => e
-      logger.error "Failed to parse response into JSON: #{e.message}"
+    # Intentar formatear la respuesta para asegurar que sea un JSON válido
+    if response_content.start_with?('[') && response_content.end_with?(']')
+      begin
+        structured_response = JSON.parse(response_content)
+        logger.info "Successfully parsed response into JSON"
+      rescue JSON::ParserError => e
+        logger.error "Failed to parse response into JSON: #{e.message}"
+        status 500
+        return json error: 'Failed to parse response into JSON'
+      end
+    else
+      logger.error "Response is not a valid JSON array"
       status 500
-      return json error: 'Failed to parse response into JSON'
+      return json error: 'Response is not a valid JSON array'
     end
 
     json questions_and_answers: structured_response
@@ -95,6 +101,42 @@ post '/api/generate-questions' do
   end
 end
 
+get '/api/pdfs' do
+  content_type :json
+
+  pdfs = db_connection do |conn|
+    # Seleccionamos solo algunos campos relevantes para no sobrecargar la respuesta
+    result = conn.exec('SELECT id, file_name, year_level, subject, exam_type FROM pdf_files;')
+    result.map do |row|
+      {
+        id: row['id'],
+        file_name: row['file_name'],
+        year_level: row['year_level'],
+        subject: row['subject'],
+        exam_type: row['exam_type']
+      }
+    end
+  end
+
+  json pdfs
+end
+
+get '/api/pdf/:id' do
+  content_type 'application/pdf'
+
+  pdf = db_connection do |conn|
+    # Asegúrate de seleccionar la columna que contiene el contenido binario del PDF
+    result = conn.exec_params('SELECT pdf_content FROM pdf_files WHERE id = $1', [params[:id]])
+    result.getvalue(0, 0) if result.ntuples > 0
+  end
+
+  if pdf
+    response.write(pdf)
+  else
+    status 404
+    json error: "PDF not found."
+  end
+end
 
 helpers do
   def db_connection
@@ -149,18 +191,27 @@ end
 
 get '/api/documents' do
   documents = db_connection do |conn|
-    result = conn.exec('SELECT document_id, title, file_path FROM documents;')
+    # Modifico la consulta para incluir la columna 'pdf_content'
+    result = conn.exec('SELECT id, academic_year, subject, exam_type, file_name, pdf_content FROM document ORDER BY academic_year, subject, exam_type;')
     result.map do |row|
       {
-        id: row['document_id'],
-        title: row['title'],
-        file_path: row['file_path']
+        id: row['id'],
+        academic_year: row['academic_year'],
+        subject: row['subject'],
+        exam_type: row['exam_type'],
+        file_name: row['file_name'],
+        pdf_content: Base64.strict_encode64(row['pdf_content'])
       }
     end
   end
 
+  content_type :json
   json documents
 end
+
+
+
+
 
 get '/users' do
   db_connection do |conn|
