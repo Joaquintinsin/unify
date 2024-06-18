@@ -3,14 +3,14 @@ import { useRouter } from "next/router";
 import UserMessage from "../messages/user-message";
 import ChatBotMessage from "../messages/chatbot-message";
 import t from "@/lang/locale";
-import { BOT, BOTCITO, SEND_ARROW } from "@/src/utils/constants";
+import { BOTCITO } from "@/src/utils/constants";
 import { ChatLogContext } from "@/src/context/ChatLogContext";
 import { LoadingChatBotMessageContext } from "@/src/context/LoadingChatBotMessage";
 import { ChatContext } from "@/src/context/ScrollToBottom";
 import { Option } from "../../option";
-import {
-  FaFilePdf,
-} from "react-icons/fa";
+import { FaFilePdf } from "react-icons/fa";
+import { Typewriter } from 'react-simple-typewriter';
+
 
 interface QuizQuestion {
   question: string;
@@ -34,8 +34,7 @@ interface PDFs {
 
 const SectionChat: React.FC = () => {
   const { locale } = useRouter();
-  const { setLoadingChatBotMessage } = useContext(LoadingChatBotMessageContext);
-  const { chatLog, setChatLog, setIsTypingChatbot, setTypingEffect } = useContext(ChatLogContext);
+  const { chatLog, setChatLog } = useContext(ChatLogContext);
 
   const [input, setInput] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
@@ -43,7 +42,7 @@ const SectionChat: React.FC = () => {
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [pdfs, setPDFs] = useState<PDFs>({});
-  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<any>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedExamType, setSelectedExamType] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{ year: string | null; subject: string | null; examType: string | null }>>([]);
@@ -51,6 +50,22 @@ const SectionChat: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const lastMessageRef = useRef<HTMLDivElement>(null);
+  const [percentage, setPercentage] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPercentage(prevPercentage => {
+        if (prevPercentage < 100) {
+          return prevPercentage + 1;
+        }
+        clearInterval(interval);
+        return 250;
+      });
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, []);
+
 
   useEffect(() => {
     fetchDocuments();
@@ -118,6 +133,9 @@ const SectionChat: React.FC = () => {
   };
 
   const handleClipClick = () => {
+    setSelectedYear(null);
+    setSelectedSubject(null);
+    setSelectedExamType(null);
     fileInputRef.current?.click();
   };
 
@@ -142,6 +160,8 @@ const SectionChat: React.FC = () => {
       const completionMessage = {
         user: "chatbot",
         message: `Quiz completed! Thank you for participating. Your final score is ${finalScore}/${quizQuestions.length}.`,
+        score: finalScore,
+        total: quizQuestions.length,
       };
       setChatLog([...updatedChatLog, completionMessage]);
     }
@@ -161,9 +181,11 @@ const SectionChat: React.FC = () => {
     event.preventDefault();
     setInput("");
     setFile(null);
-    setIsLoading(true); // Activa la pantalla de carga
+    setIsLoading(true);
 
     const formData = new FormData();
+    console.log("file", file);
+    console.log("input", input);
     if (input) formData.append("message", input);
     if (file) formData.append("file", file);
 
@@ -193,8 +215,6 @@ const SectionChat: React.FC = () => {
       console.error("Error:", error);
       setChatLog([{ user: "chatbot", message: t(locale, "Error fetching questions") }]);
     }
-
-    setIsLoading(false); // Desactiva la pantalla de carga
   };
 
   const displayPDFs = () => {
@@ -205,17 +225,33 @@ const SectionChat: React.FC = () => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {pdfsToShow.map((doc, index) => (
-          <div key={index} className="border shadow-lg rounded-lg overflow-hidden transition-shadow duration-300 hover:shadow-xl">
-            <iframe src={doc.url} title={doc.title} className="w-full h-64" />
+          <div key={index} className="border shadow border-gray-300 rounded-lg overflow-hidden transition-shadow duration-300 hover:shadow-xl">
+            <iframe src={doc.url} title={doc.title} className="w-full h-44" />
             <div className="p-4">
-              <h4 className="font-bold text-lg mb-2">{doc.title}</h4>
-              <p className="text-gray-700 mb-4">{doc.description}</p>
-              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mb-2 inline-block transition-colors duration-300 hover:text-blue-600">
-                Ver PDF
-              </a>
-              <button onClick={() => handlePDFSelect(doc)} className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-300">
-                Generar Cuestionario
+              <h4 className="font-bold text-lg">{doc.title}</h4>
+              <p className="text-gray-700 mb-2">{doc.description}</p>
+              <button className="bg-white border cursor-default justify-center w-full mx-auto shadow border-red-500 flex p-3 rounded text-black-200 hover:border-red-700 transition duration-300 ease-in-out transform hover:translate-y-[-2px] hover:shadow-lg">
+                <FaFilePdf size={24} className="text-red-500" />
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 no-underline font-medium text-black-700">Abrir PDF</a>
               </button>
+
+              <div onClick={() => handlePDFSelect(doc)} className="w-full bg-[royalblue] rounded-lg cursor-pointer">
+                <button className="send mx-auto" onClick={handleSubmitMessageChat}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    height="24"
+                  >
+                    <path fill="none" d="M0 0h24v24H0z"></path>
+                    <path
+                      fill="currentColor"
+                      d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"
+                    ></path>
+                  </svg>
+                  <span className="w-full text-center">Send</span>
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -226,6 +262,7 @@ const SectionChat: React.FC = () => {
 
   const handlePDFSelect = async (pdf: any) => {
     setIsLoading(true);
+
     const formData = new FormData();
     formData.append("url", pdf.url);
 
@@ -240,6 +277,10 @@ const SectionChat: React.FC = () => {
       const data = await response.json();
       const questions = data.questions_and_answers;
 
+      if (!questions.length) {
+        throw new Error("No questions found in the PDF");
+      }
+
       const firstQuestion = questions[0];
       const firstQuestionMessage = {
         user: "chatbot",
@@ -253,9 +294,9 @@ const SectionChat: React.FC = () => {
       setCurrentQuestionIndex(0);
     } catch (error) {
       console.error("Error:", error);
-      setChatLog([{ user: "chatbot", message: "Error fetching questions from PDF" }]);
+      setChatLog([{ user: "chatbot", message: "Error fetching questions from PDF. Please try again." }]);
     } finally {
-      setIsLoading(false); // Detiene la pantalla de carga
+      setIsLoading(false);
     }
   };
 
@@ -264,22 +305,39 @@ const SectionChat: React.FC = () => {
     <div className="bg-gray-500 relative h-full w-full py-5 flex flex-col items-center">
       {isLoading && (
         <div className="flex h-full w-full items-center justify-center">
-          <div className=" text-center flex mt-28 flex-col justify-center items-center">
-            <div style={{ animation: 'slow-bounce 2s infinite' }}> {/* Ajusta aquí para cambiar la duración */}
+          <div className="text-center flex mt-28 flex-col justify-center items-center">
+            <div style={{ animation: 'slow-bounce 2s infinite' }}>
               <img src={BOTCITO} alt="Loading" className="h-32 mx-auto" />
             </div>
-            <p className="font-semibold text-2xl mt-2">Estamos realizando la búsqueda...</p>
-            <span className="py-3 text-gray-600 text-xl font-medium">Por favor aguarda un momento</span>
-            <h2 className="text-gray-600 font-bold text-xl">83%</h2>
+            <p className="font-semibold text-2xl mt-2">
+              <Typewriter
+                words={[
+                  'Generating questions...',
+                  'Analyzing data...',
+                  'Fetching resources...',
+                  'Compiling results...',
+                  'Preparing analysis...',
+                  'Calculating probabilities...',
+                  'Loading models...'
+                ]}
+                loop={0}
+                cursor
+                cursorStyle='_'
+                typeSpeed={70}
+                deleteSpeed={50}
+                delaySpeed={1000}
+              />
+            </p>
+            <span className="py-3 text-gray-600 text-xl font-medium">Please wait a moment</span>
+            <h2 className="text-gray-600 font-bold text-xl">{percentage}%</h2>
           </div>
         </div>
       )}
       {!isLoading &&
-        <div className={`w-full flex-1 ${!quizQuestions.length && "items-center"} flex flex-col overflow-y-auto p-5 dark:bg-gray-800`} ref={chatContainerRef}>
+        <div className={`w-full flex-1 ${!quizQuestions.length ? "items-center" : "pt-0"} flex flex-col overflow-y-auto p-5 pt-3 dark:bg-gray-800`} ref={chatContainerRef}>
           {!quizQuestions.length &&
-            <div className="sticky top-0 z-10 bg-white dark:bg-black-500 w-3/4 text-center py-2 flex justify-between items-center">
+            <div onClick={handleBack} className="sticky top-0 z-10 bg-white dark:bg-black-500 w-3/4 text-center py-2 flex justify-between items-center">
               <button
-                onClick={handleBack}
                 className={`custom-button ml-10 text-blue-900 dark:text-white hover:text-blue-700 dark:hover:text-gray-300`}
               >
                 <svg
@@ -299,19 +357,18 @@ const SectionChat: React.FC = () => {
               </button>
               <div>
                 <h2 className="text-xl pt-4 font-semibold text-blue-900 dark:text-white">
-                  {t(locale, "Start a new conversation")}
+                  Start a New Quiz
                 </h2>
                 <p className="text-[0.95rem] text-gray-600">
-                  {t(locale, "WriteQuestions")}
+                  Compose questions to prepare for your exam
                 </p>
               </div>
-              <div style={{ width: '1.5rem' }}> {/* Espacio en blanco para centrar el título */}
+              <div style={{ width: '1.5rem' }}>
               </div>
             </div>}
-          {/* Contenido principal con scroll */}
           {chatLog.length === 0 ? (
             <>
-              <div className={`${quizQuestions.length ? "w-[90%]" : "w-3/4"} h-[22rem] overflow-y-auto rounded-b-lg bg-white px-10 leading-[1.6rem] dark:bg-black-500`}>
+              <div className={`${quizQuestions.length ? "w-[90%]" : "w-3/4"} pb-8 h-[22rem] overflow-y-auto rounded-b-lg bg-white px-10 leading-[1.6rem] dark:bg-black-500`}>
                 {!selectedYear && (
                   Object.keys(pdfs).map((year, index) => (
                     <Option key={index} label={year} onClick={() => handleYearSelect(year)} selected={selectedYear === year} />
@@ -338,18 +395,17 @@ const SectionChat: React.FC = () => {
           ) : (
             <>
               {chatLog.map((entry: any, index: number) => (
-                <div key={index} ref={index === chatLog.length - 1 ? lastMessageRef : null}>
+                <div className="px-44" key={index} ref={index === chatLog.length - 1 ? lastMessageRef : null}>
                   {entry.user === "user" ? (
                     <UserMessage message={entry.message} />
                   ) : (
-                    <ChatBotMessage message={entry.message} options={entry.options} onAnswer={handleAnswerQuestion} />
+                    <ChatBotMessage message={entry.message} options={entry.options} onAnswer={handleAnswerQuestion} score={entry.score} total={entry.total} />
                   )}
                 </div>
               ))}
             </>
           )}
 
-          {/* Elemento sticky para "Select your file" */}
           {!quizQuestions.length &&
             <div className="sticky bottom-0 z-10 mt-5 w-full text-center py-2">
               <label htmlFor="file-upload" className="cursor-pointer">
@@ -358,7 +414,7 @@ const SectionChat: React.FC = () => {
                   onClick={handleClipClick}
                   className={`button px-4 py-2 rounded ${file ? "bg-green-500 text-white" : "bg-gray-500 text-gray-100"}`}
                 >
-                  Sube tu propio Archivo :)
+                  Upload your own File :)
                 </button>
                 <input
                   type="file"
@@ -399,11 +455,11 @@ const SectionChat: React.FC = () => {
                     <span>Send</span>
                   </button>
                 </div>
-
-
               )}
-            </div>}
-        </div>}
+            </div>
+          }
+        </div>
+      }
     </div>
   );
 };

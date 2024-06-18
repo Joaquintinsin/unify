@@ -75,7 +75,7 @@ export const NETWORK_RESPONSE_NOT_OK = "Network response was not ok";
 /* Images */
 export const ETENDO_SQUARE_LOGOTYPE = "/assets/etendo-square-logotype.png";
 export const BACKGROUND_LOGIN = "/assets/bg-login.png";
-export const ETENDO_FAVICON = "/assets/etendo-favicon.png";
+export const UNIFY_FAVICON = "/assets/favicon.png";
 export const STARS = "/assets/icons/stars.png";
 export const REMEMBER_ACTIVE = "/assets/icons/remember-active.png";
 export const REMEMBER_DISABLED = "/assets/icons/remember-disabled.png";

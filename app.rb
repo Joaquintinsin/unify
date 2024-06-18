@@ -73,7 +73,7 @@ post '/api/generate-questions' do
     client = OpenAI::Client.new
     response = client.chat(
       parameters: {
-        model: "gpt-4o", # Usa el modelo con capacidad de visión
+        model: "gpt-4o",
         messages: [
           { role: "system", content: structured_prompt },
           { role: "user", content: full_text }
