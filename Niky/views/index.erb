@@ -20,14 +20,15 @@
 		<img src="media\logo.png" alt="Logo Unify" class="logo">
 		<p class="Principal"></p>
 			<nav>
-				<a href="#">HOME</a>
+				<a href="#main">HOME</a>
 				<a href="chat">PRACTICE</a>
-				<a href="subjects container">ACADEMIC YEAR</a>
-				<a href="nosotros">US</a>
+				<a href="#hero">LOGIN</a>
+				<a href="#AcademicYear">ACADEMIC YEAR</a>
+				<a href="#us">US</a>
 			</nav>
 		</div>
   	</header>
-	<div class="main-content">
+	<div class="main-content" id="main">
 		<div class="concept widescreen">
 			<% ['U','N','I','F','Y'].each_with_index do |val, index| %>
 			<div class="hover">
@@ -62,7 +63,7 @@
 		</div>
 	</section>
 
-	<div class="Years-container">
+	<div class="Years-container" id= "AcademicYear">
 		<h2><span class="material-symbols-outlined">
 		star_rate
 		</span>
@@ -102,7 +103,7 @@
 			</a>
 		</div>
 
-		<section class="nosotros">
+		<section class="nosotros" id="us">
 			<h1>US</h1>
 			<p class= estilo> Esta pagina surgio, a partir de un poyecto dado en la Universidad Nacional de Rio Cuarto, 
 				rapidamente apostamos a esta idea, para facilitar el estudio y el alcance de material a muchos.
