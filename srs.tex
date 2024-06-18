@@ -1,4 +1,4 @@
-\documentclass[10pt,twocolumn]{article}
+\documentclass[10pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[spanish]{babel}
 \usepackage{lipsum}
@@ -10,7 +10,7 @@
 }
 
 \author{
-  Tomás Rodeghiero\textsuperscript{1}, Nicolle Rosatti\textsuperscript{2}, Joaquín Tissera\textsuperscript{3} \\
+  Tomás Rodeghiero, Nicolle Rosatti, Joaquín Tissera \\
   \textit{Departamento de Ciencias de la Computación} \\
   \textit{Facultad de Ciencias Exactas, Físico-Químicas y Naturales} \\\textit{Universidad Nacional de Río Cuarto}
 }
@@ -35,39 +35,42 @@ Unify tiene como propósitos principales:
   \item Ampliar el acceso a documentación académica de relevancia.
   \item Incentivar la colaboración productiva entre alumnos y docentes.
   \item Implementar un proceso eficaz para la evaluación y aprobación de contenidos.
-  \item Desarrollar un sistema de reconocimientos que valore las contribuciones significativas a la comunidad educativa.
+  % \item Desarrollar un sistema de reconocimientos que valore las contribuciones significativas a la comunidad educativa.
   \item Garantizar la pertinencia y excelencia del material disponible para el estudio.
 \end{itemize}
 
 \section{Descripción del Sistema}
-Unify se presentará como una plataforma web en la que los usuarios, mediante la creación de perfiles personales, podrán subir y acceder a documentos académicos previamente aprobados. Estos recursos estarán organizados según carrera, asignatura y año académico correspondiente, y el sistema facilitará la búsqueda de información mediante filtros específicos por universidad, carrera y materia.
+Unify se presentará como una plataforma web en la que los usuarios, mediante la creación de perfiles personales, podrán subir y acceder a documentos académicos previamente aprobados. Estos recursos estarán organizados según año académico correspondiente y asignatura. % Estos recursos estarán organizados según carrera, asignatura y año académico correspondiente, y el sistema facilitará la búsqueda de información mediante filtros específicos por universidad, carrera y materia.
 
 \subsection{Requerimientos de Usuarios}
 Los usuarios de Unify podrán:
 \begin{itemize}
   \item Registrarse y gestionar perfiles personales dentro de la plataforma.
-  \item Contribuir con documentos sujetos a evaluación por un equipo de moderadores.
-  \item Consultar y valorar los documentos aprobados.
-  \item Realizar búsquedas específicas utilizando filtros avanzados.
-  \item Participar en un sistema de recompensas por colaboración y calidad en las contribuciones.
+  \item Contribuir con documentos persistentes en la aplicación.
+  \item Interactuar con una IA para el intercambio de conocimientos.
+  % \item Contribuir con documentos sujetos a evaluación por un equipo de moderadores.
+  % \item Consultar y valorar los documentos aprobados.
+  % \item Realizar búsquedas específicas utilizando filtros avanzados.
+  % \item Participar en un sistema de recompensas por colaboración y calidad en las contribuciones.
 \end{itemize}
 
 \subsection{Requerimientos del Sistema}
 Para satisfacer las necesidades de la comunidad, Unify contará con:
 \begin{itemize}
-  \item Un sistema de gestión de usuarios robusto, con diferentes niveles de roles y permisos.
+  % \item Un sistema de gestión de usuarios robusto, con diferentes niveles de roles y permisos.
   \item Una infraestructura de almacenamiento seguro y organizado para los documentos.
-  \item Un algoritmo de búsqueda eficaz para facilitar la localización de recursos.
-  \item Un proceso de revisión riguroso para asegurar la integridad académica y la calidad del contenido disponible.
+  \item Un sistema de gestión de usuarios.
+  % \item Un algoritmo de búsqueda eficaz para facilitar la localización de recursos.
+  % \item Un proceso de revisión riguroso para asegurar la integridad académica y la calidad del contenido disponible.
 \end{itemize}
 
 \section{Requerimientos Funcionales}
 Adicionalmente a las capacidades previamente mencionadas, Unify integrará:
 \begin{itemize}
-  \item Un sistema de autenticación que incluirá funciones de recuperación de contraseñas y gestión de seguridad de la cuenta.
+  \item Un sistema de autenticación mediante Google.
   \item Una interfaz de entrenamiento interactivo apoyada por inteligencia artificial para facilitar la revisión de temas y la preparación de exámenes.
-  \item Opciones de personalización de perfil para usuarios con categorías Premium en adelante, permitiendo una mayor expresión individual dentro de la comunidad.
-  \item Un sistema de alertas y notificaciones para mantener a los usuarios informados sobre nuevas adiciones de documentos o actualizaciones importantes dentro de la plataforma.
+  % \item Opciones de personalización de perfil para usuarios con categorías Premium en adelante, permitiendo una mayor expresión individual dentro de la comunidad.
+  % \item Un sistema de alertas y notificaciones para mantener a los usuarios informados sobre nuevas adiciones de documentos o actualizaciones importantes dentro de la plataforma.
 \end{itemize}
 
 \section{Requerimientos No Funcionales}
@@ -79,7 +82,6 @@ Para el diseño e implementación de Unify, se considerarán aspectos fundamenta
   \item Rendimiento: Optimización de los tiempos de respuesta del sistema, garantizando búsquedas rápidas y un acceso eficiente a los documentos y recursos disponibles.
 \end{itemize}
 
-\newpage
 \section{Consideraciones Finales}
 El desarrollo de Unify representa un paso adelante en la modernización de los recursos académicos en la UNRC, con el potencial de impactar positivamente en la forma en que estudiantes y docentes interactúan y acceden a la información educativa. La implementación exitosa de este sistema requerirá una colaboración estrecha entre desarrolladores, usuarios finales y la administración universitaria para asegurar que se satisfagan todas las necesidades y expectativas planteadas en esta especificación de requerimientos.
 

@@ -3,8 +3,9 @@ import React, { FormEvent, useState } from "react";
 import { useRouter } from "next/router";
 import t from "@/lang/locale";
 
-import { authenticatedUser } from "@/src/utils/functions";
-import { withSessionSsr } from "@/src/utils/withSession";
+import { signIn } from "next-auth/react";
+import isWebview from 'is-ua-webview';
+
 
 import {
   BACKGROUND_LOGIN,
@@ -27,6 +28,14 @@ import {
 // );
 
 const Login = () => {
+  const handleSignIn = () => {
+    if (isWebview(window.navigator.userAgent)) {
+      alert("Esta aplicación soporta navegadores seguros como Chrome, Firefox o Safari. Por favor, inicia sesión utilizando alguno de estos navegadores.");
+      return;
+    }
+    signIn("google");
+  };
+
   // page context using Next.js
   const router = useRouter();
   const { locale } = router;
@@ -42,31 +51,6 @@ const Login = () => {
   // function to hide or view the password
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
-  };
-
-  // the handleLogin function is an asynchronous function that handles the login process
-  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
-    // prevent the default form submission behavior
-    event.preventDefault();
-
-    // send a fetch request to the /api/login API route with the user's credentials
-    const request = await fetch("/api/login", {
-      method: "POST", // use the POST method for the request
-      headers: { contentType: "application/json" }, // set the content type of the request to JSON
-      body: JSON.stringify({
-        // convert the username and password variables to a JSON string
-        username: username,
-        password: password,
-      }),
-    });
-
-    // if the fetch request is successful (HTTP status code 200), navigate to the home page
-    // if (request.ok) {
-      await router.push("/chat");
-    // } else {
-    //   setInvalidCredentials(true);
-    //   setShowInvalidCredentialsMessage(true);
-    // }
   };
 
   return (
@@ -109,67 +93,23 @@ const Login = () => {
           </p>
         </div>
 
-        <form onSubmit={handleLogin}>
-          <div className="mb-5">
-            {/* show the username input */}
-            <label
-              className="font-regular mb-1 block text-gray-600"
-              htmlFor="username"
-              id="username"
-            >
-              {t(locale, "Username")}
-            </label>
-            <input
-              className={`w-full appearance-none rounded-md border-[1.5px] ${
-                invalidCredentials ? "border-red-600" : "border-gray-600"
-              } py-2 px-3 leading-tight text-blue-900 focus:border-blue-900 focus:shadow-sm focus:outline-none`}
-              id="username"
-              type="text"
-              placeholder={t(locale, "EnterUsername")}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onFocus={() => setInvalidCredentials(false)}
-              autoComplete="username"
-            />
-          </div>
-          <div className="relative mb-5">
-            {/* show the password input */}
-            <label
-              className="font-regular mb-1 block text-gray-600"
-              htmlFor="password"
-              id="password"
-            >
-              {t(locale, "Password")}
-            </label>
-            <input
-              className={`w-full appearance-none rounded-md border-[1.5px] ${
-                invalidCredentials ? "border-red-600" : "border-gray-600"
-              } py-2 px-3 leading-tight text-blue-900 focus:border-blue-900 focus:shadow-sm focus:outline-none`}
-              id="password"
-              type={showPassword ? "text" : "password"}
-              placeholder={t(locale, "EnterPassword")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => setInvalidCredentials(false)}
-              autoComplete="current-password"
-            />
-            <img
-              className="absolute right-5 top-[72.25%] h-6 -translate-y-1/2 cursor-pointer"
-              src={showPassword ? SHOW_PASSWORD : HIDE_PASSWORD}
-              alt={t(locale, "Remember")}
-              onClick={toggleShowPassword}
-            />
-          </div>
+        <button
+          // when the button is clicked, call the handleLogin function
+          onClick={handleSignIn}
+          className="mt-7 flex w-full items-center justify-center rounded-lg bg-blue-900 py-[0.825rem] text-[1.05rem] font-medium text-white"
+        >
+          {/* show the "Login" text */}
+          Iniciar Sesión con Google
+        </button>
 
-          <button
-            // when the button is clicked, call the handleLogin function
-            onClick={() => handleLogin}
-            className="mt-7 flex w-full items-center justify-center rounded-lg bg-blue-900 py-[0.825rem] text-[1.05rem] font-medium text-white"
-          >
-            {/* show the "Login" text */}
-            {t(locale, "Login")}
-          </button>
-        </form>
+        <button
+          // when the button is clicked, call the handleLogin function
+          onClick={handleSignIn}
+          className="mt-7 flex w-full items-center justify-center rounded-lg bg-blue-900 py-[0.825rem] text-[1.05rem] font-medium text-white"
+        >
+          {/* show the "Login" text */}
+          Registrarse
+        </button>
       </div>
     </div>
   );

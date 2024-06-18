@@ -5,7 +5,7 @@ import t from "@/lang/locale";
 import { useRouter } from "next/router";
 import { featuresConfig } from "@/src/utils/featuresConfig";
 
-const UserMessage = ({ message, time }: MessageProps) => {
+const UserMessage = ({ message, time }: any) => {
   const { locale } = useRouter();
 
   return (

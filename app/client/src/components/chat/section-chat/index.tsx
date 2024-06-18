@@ -1,50 +1,40 @@
 import React, { ChangeEvent, useContext, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import UserMessage from "../messages/user-message";
 import ChatBotMessage from "../messages/chatbot-message";
-import { ChatLogContext } from "@/src/context/ChatLogContext";
-import { NewChatContext } from "@/src/context/NewChatContext";
-import { DeletedChatsContext } from "@/src/context/DeletedChatsContext";
-import { ChatSearchContext } from "@/src/context/ChatSearchContext";
 import t from "@/lang/locale";
-import {
-  CLIP,
-  LIMIT_NUMBER_STANDARD_CONVERSATIONS,
-  SCROLL_BUFFER,
-  SEARCH,
-  SEND_ARROW,
-} from "@/src/utils/constants";
-import { frequentQuestions, instructions } from "@/src/data";
-import { LoadingChatBotMessageContext } from "@/src/context/LoadingChatBotMessage";
-import { ChatContext } from "@/src/context/ScrollToBottom";
-import { useRouter } from "next/router";
-import { ConversationContext } from "@/src/context/ConversationContext";
-import { cleanMessage } from "@/src/utils/functions";
+import { CLIP, SEARCH, SEND_ARROW } from "@/src/utils/constants";
+import { ChatLogContext } from "@/src/context/ChatLogContext";
 import { ChatHistoryContext } from "@/src/context/ChatHistoryContext";
-import { ShowSubscriptionToVersionPremiumPopupContext } from "@/src/context/ShowSubscriptionToVersionPremiumPopupContext";
+import { ChatSearchContext } from "@/src/context/ChatSearchContext";
+import { LoadingChatBotMessageContext } from "@/src/context/LoadingChatBotMessage";
+import { DeletedChatsContext } from "@/src/context/DeletedChatsContext";
+import { NewChatContext } from "@/src/context/NewChatContext";
+import { ChatContext } from "@/src/context/ScrollToBottom";
 
-const SectionChat = () => {
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
+interface PDF {
+  title: string;
+  url: string;
+  description: string;
+}
+
+interface PDFs {
+  [year: string]: {
+    [subject: string]: {
+      [examType: string]: PDF[];
+    };
+  };
+}
+
+const SectionChat: React.FC = () => {
   const { locale } = useRouter();
-  const { setConversationId, conversationId } = useContext(ConversationContext);
-
-  const [input, setInput] = useState("");
-  const [retryMessage, setRetryMessage] = useState(false);
-  const [userHasScrolled, setUserHasScrolled] = useState(false);
-  const [currentInstruction, setCurrentInstruction] = useState(1);
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [regenerateQuestion, setRegenerateQuestion] = useState(false);
-  const [initializedConversation, setInitializedConversation] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-
-  const [quizQuestions, setQuizQuestions] = useState<any>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [score, setScore] = useState(0);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-
   const { chatHistory } = useContext(ChatHistoryContext);
-  const { setShowSubscriptionToVersionPremium } = useContext(
-    ShowSubscriptionToVersionPremiumPopupContext
-  );
   const { chatSearch, inputChatSearch } = useContext(ChatSearchContext);
   const { setLoadingChatBotMessage } = useContext(LoadingChatBotMessageContext);
   const {
@@ -57,156 +47,84 @@ const SectionChat = () => {
     setIsTypingChatbot,
     setTypingEffect,
   } = useContext(ChatLogContext);
+
+  const [input, setInput] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
+  const [userResponses, setUserResponses] = useState<string[]>([]);
+  const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [pdfs, setPDFs] = useState<PDFs>({});
+  const [pdfsToShow, setPdfsToShow] = useState<PDF[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedExamType, setSelectedExamType] = useState<string | null>(null);
+  const [history, setHistory] = useState<Array<{ year: string | null, subject: string | null, examType: string | null }>>([]);
   const { deletedChats } = useContext(DeletedChatsContext);
-  const { newChat, newChatStarted, setNewChatStarted } =
-    useContext(NewChatContext);
-
-  const shouldRenderSearchResults = chatSearch;
-  const shouldShowInstructions =
-    showInstructions && !deletedChats && !newChat && !chatSearch && !chatLog;
-  const isNewChat = newChat && chatLog.length === 0 && !chatSearch;
-  const renderChat =
-    (!showInstructions && !inputChatSearch) || newChat || chatLog;
-  const renderSearchInput = !deletedChats && !chatSearch;
-
+  const { newChat, newChatStarted, setNewChatStarted } = useContext(NewChatContext);
   const { chatContainerRef } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handleScroll = (event: any) => {
-      const userScrolledUp =
-        event.target.scrollHeight - event.target.scrollTop >
-        event.target.clientHeight + SCROLL_BUFFER;
-
-      if (userScrolledUp) {
-        setUserHasScrolled(true);
-      } else {
-        setUserHasScrolled(false);
-      }
-    };
-
-    return () => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [chatLog, isTypingChatbot]);
-
-  useEffect(() => {
-    if (chatContainerRef.current && !userHasScrolled) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [chatLog]);
-
-  useEffect(() => {
-    const instrucctionsSeen =
-      localStorage.getItem("instructionsSeen") === "true";
-
-    if (!instrucctionsSeen) {
-      setShowInstructions(true);
-    }
+    fetchDocuments();
   }, []);
 
-  const handleSubmitMessageChat: any = async (
-    event: any
-  ) => {
-    if (event) {
-      event.preventDefault();
-    }
-
-    if (chatHistory?.length === LIMIT_NUMBER_STANDARD_CONVERSATIONS) {
-      setShowSubscriptionToVersionPremium(true);
-      return;
-    }
-
-    if (regenerateQuestion) setRegenerateQuestion(false);
-
-    setTypingEffect(true);
-    setIsTypingChatbot(true);
-    setLoadingChatBotMessage(true);
-
-    let messageContent = input;
-    if (file) {
-      messageContent = `${input} [Archivo adjunto: ${file.name}]`;
-    }
-
-    let chatLogNew = [...chatLog, { user: "user", message: messageContent }];
-    let loadingChatLogNew = [...chatLogNew, { user: "chatbot", message: "" }];
-    setChatLog(loadingChatLogNew);
-    let newChatLog: any = [...chatLog, { user: "user", message: messageContent }];
-    setInput("");
-    setFile(null);
-
+  const fetchDocuments = async () => {
     try {
-      const formData = new FormData();
-      formData.append("message", input);
-      if (file) {
-        formData.append("file", file);
-      }
-      if (conversationId) {
-        formData.append("conversationId", conversationId);
-      }
-
-      fetch('/api/generate-questions', {
-        method: 'POST',
-        body: formData,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log("Success:", data.questions_and_answers)
-          const questions = data.questions_and_answers;
-          const questionMessages = questions.map((question: any) => ({
-            user: "chatbot",
-            message: question.question + "?? ",
-            options: question.options,
-            answer: question.answer,
-            type: "quiz"
-          }));
-          setQuizQuestions(questions);
-          setChatLog([...newChatLog, ...questionMessages]);
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-        });
-
-      setChatLog(newChatLog);
-      setLoadingChatBotMessage(false);
-      setIsTypingChatbot(false);
+      const response = await fetch('/api/documents');
+      const data = await response.json();
+      setPDFs(organizePDFs(data));
     } catch (error) {
-      console.error("Error:", error);
-
-      setTimeout(() => {
-        setRegenerateQuestion(true);
-      }, 2500);
-
-      const failedMessage = {
-        user: "chatbot",
-        message: t(locale, "Error"),
-        conversationId: undefined,
-        messageId: undefined,
-        error: true,
-      };
-
-      newChatLog.push(failedMessage);
+      console.error("Error fetching documents:", error);
     }
   };
 
-  useEffect(() => {
-    if (retryMessage) {
-      handleSubmitMessageChat();
-      setRetryMessage(false);
-    }
-  }, [chatLog]);
+  const organizePDFs = (documents: any[]) => {
+    return documents.reduce((acc: PDFs, doc: any) => {
+      const { academic_year, subject, exam_type, title, document_url, description } = doc;
+      if (!acc[academic_year]) acc[academic_year] = {};
+      if (!acc[academic_year][subject]) acc[academic_year][subject] = {};
+      if (!acc[academic_year][subject][exam_type]) acc[academic_year][subject][exam_type] = [];
+      acc[academic_year][subject][exam_type].push({ title, url: document_url, description });
+      return acc;
+    }, {});
+  };
 
-  const handleNextInstruction = () => {
-    if (currentInstruction <= instructions.length) {
-      setCurrentInstruction(currentInstruction + 1);
-    } else {
-      setShowInstructions(false);
-      localStorage.setItem("instructionsSeen", "true");
+  const handleYearSelect = (year: string) => {
+    setHistory([...history, { year: selectedYear, subject: selectedSubject, examType: selectedExamType }]);
+    setSelectedYear(year);
+    setSelectedSubject(null);
+    setSelectedExamType(null);
+    setPdfsToShow([]);
+  };
+
+  const handleSubjectSelect = (subject: string) => {
+    setHistory([...history, { year: selectedYear, subject: selectedSubject, examType: selectedExamType }]);
+    setSelectedSubject(subject);
+    setSelectedExamType(null);
+    setPdfsToShow([]);
+  };
+
+  const handleExamTypeSelect = (examType: string) => {
+    setHistory([...history, { year: selectedYear, subject: selectedSubject, examType: selectedExamType }]);
+    setSelectedExamType(examType);
+    setPdfsToShow(pdfs[selectedYear!][selectedSubject!][examType] || []);
+  };
+
+  const handleBack = () => {
+    const lastState = history.pop();
+    if (lastState) {
+      setSelectedYear(lastState.year);
+      setSelectedSubject(lastState.subject);
+      setSelectedExamType(lastState.examType);
+      if (lastState.examType) {
+        setPdfsToShow(pdfs[lastState.year!][lastState.subject!][lastState.examType] || []);
+      } else if (lastState.subject) {
+        setPdfsToShow([]);
+      } else {
+        setPdfsToShow([]);
+      }
+      setHistory(history);
     }
   };
 
@@ -222,254 +140,258 @@ const SectionChat = () => {
     }
   };
 
-  useEffect(() => {
-    if (quizCompleted) {
-      alert(`Quiz completed! Your score is ${score}/${quizQuestions?.length}`);
+  const handleAnswerQuestion = (selectedOption: string) => {
+    const newUserResponses = [...userResponses, selectedOption];
+    setUserResponses(newUserResponses);
+    const newUserMessage = { user: "user", message: selectedOption };
+    const updatedChatLog = [...chatLog, newUserMessage];
+    const nextQuestionIndex = currentQuestionIndex + 1;
+    if (nextQuestionIndex < quizQuestions.length) {
+      const nextQuestion = quizQuestions[nextQuestionIndex];
+      const newQuestionMessage = {
+        user: "chatbot",
+        message: nextQuestion.question,
+        options: nextQuestion.options,
+        type: "quiz"
+      };
+      setChatLog([...updatedChatLog, newQuestionMessage]);
+      setCurrentQuestionIndex(nextQuestionIndex);
+    } else {
+      const finalScore = calculateScore(newUserResponses);
+      const completionMessage = {
+        user: "chatbot",
+        message: `Quiz completed! Thank you for participating. Your final score is ${finalScore}/${quizQuestions.length}.`
+      };
+      setChatLog([...updatedChatLog, completionMessage]);
+      setQuizCompleted(true);
     }
-  }, [quizCompleted, score, quizQuestions?.length]);
+  };
 
-  return (
-    <div className="relative h-[100%] dark:bg-black-800">
-      {shouldRenderSearchResults && (
-        <div className="h-full w-full dark:bg-black-800">
-          <div className="flex items-center gap-3 border-b border-gray-400 bg-gray-300 px-5 py-3 text-[0.9rem] text-gray-600 dark:border-black-600 dark:bg-black-700">
-            <img className="h-4" src={SEARCH} alt={t(locale, "Search")} />
-            <p>
-              {t(locale, "SearchResultsFor")} &nbsp;
-              <span className="font-medium text-blue-900 dark:text-white">
-                "{inputChatSearch}"
-              </span>
-              &nbsp;- {t(locale, "ResultsFound")}
-            </p>
-          </div>
-        </div>
-      )}
+  const calculateScore = (responses: string[]) => {
+    let correctAnswers = 0;
+    quizQuestions.forEach((question, index) => {
+      if (question.answer === responses[index]) {
+        correctAnswers++;
+      }
+    });
+    return correctAnswers;
+  };
 
-      <div
-        className={`${renderSearchInput ? "h-[90%]" : "h-[100%]"
-          } relative w-full overflow-y-scroll p-5 dark:bg-black-800`}
-        ref={chatContainerRef}
-      >
-        {shouldShowInstructions && (
-          <div className="w-full rounded-lg bg-white px-6 py-3 leading-[1.6rem] dark:bg-black-600">
-            <h2 className="font-medium text-blue-900 dark:text-white">
-              {t(locale, "WelcomeToBastian")}
-            </h2>
-            <p className="text-[0.9rem] text-gray-600">
-              {t(locale, "OurGoal")}
-            </p>
+  const handleSubmitMessageChat = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-            <div className="mt-3 h-full w-full rounded-lg border border-gray-300 dark:border-black-800">
-              {instructions(t, locale)
-                .slice(0, currentInstruction)
-                .map((instruction) => (
-                  <div
-                    key={instruction.instruction}
-                    className="flex items-center border-b border-gray-300 dark:border-black-800"
-                  >
-                    <div className="flex items-center gap-4 py-3 px-5">
-                      <img
-                        className="h-4"
-                        src={instruction.icon}
-                        alt={t(locale, "Instruction")}
-                      />
-                      <p
-                        className="text-[0.9rem] leading-5 text-gray-600 dark:text-white"
-                        key={instruction.instruction}
-                      >
-                        {instruction.instruction}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              <div className="flex w-full justify-end">
-                <button
-                  id="btn"
-                  onClick={handleNextInstruction}
-                  className={`my-3 mx-5 rounded px-4 pb-[0.35rem] pt-[0.35rem] text-[0.9rem] ${currentInstruction <= instructions.length
-                    ? "bg-gray-200 text-blue-700 duration-500 hover:bg-blue-700 hover:text-white dark:bg-black-800 dark:text-white dark:hover:bg-sky-500"
-                    : "bg-blue-700 text-white dark:bg-sky-500"
-                    }`}
-                >
-                  {currentInstruction <= instructions.length
-                    ? t(locale, "Next")
-                    : t(locale, "LetsStart")}
-                </button>
-              </div>
+    setInput("");
+    setFile(null);
+
+    setTypingEffect(true);
+    setIsTypingChatbot(true);
+    setLoadingChatBotMessage(true);
+
+    const formData = new FormData();
+    if (input) formData.append("message", input);
+    if (file) formData.append("file", file);
+
+    try {
+      const response = await fetch('/api/generate-questions', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch questions");
+
+      const data = await response.json();
+      const questions = data.questions_and_answers;
+
+      const firstQuestion = questions[0];
+      const firstQuestionMessage = {
+        user: "chatbot",
+        message: firstQuestion.question,
+        options: firstQuestion.options,
+        type: "quiz"
+      };
+
+      setQuizQuestions(questions);
+      setChatLog([firstQuestionMessage]);
+      setCurrentQuestionIndex(0);
+    } catch (error) {
+      console.error('Error:', error);
+      setChatLog([{ user: "chatbot", message: t(locale, "Error fetching questions") }]);
+    }
+
+    setIsTypingChatbot(false);
+    setLoadingChatBotMessage(false);
+  };
+
+  const displayPDFs = () => {
+    if (!selectedYear || !selectedSubject || !selectedExamType) return null;
+
+    const pdfsToShow = pdfs[selectedYear]?.[selectedSubject]?.[selectedExamType] || [];
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {pdfsToShow.map((doc, index) => (
+          <div key={index} className="card border rounded-lg shadow-lg overflow-hidden">
+            <iframe src={doc.url} title={doc.title} className="w-full h-64" />
+            <div className="p-4">
+              <h4 className="font-bold text-lg mb-2">{doc.title}</h4>
+              <p className="text-gray-700 mb-4">{doc.description}</p>
+              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mb-2 inline-block">Ver PDF</a>
+              <button
+                onClick={() => handlePDFSelect(doc)}
+                className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Generar Cuestionario
+              </button>
             </div>
           </div>
-        )}
+        ))}
+      </div>
+    );
+  };
 
-        {isNewChat || quizQuestions?.length == 0 && (
-          <div className="w-full rounded-lg bg-white px-6 py-12 leading-[1.6rem] dark:bg-black-500">
-            <h2 className="text-center text-xl font-semibold text-blue-900 dark:text-white">
-              {t(locale, "StartNewConversation")}
-            </h2>
-            <p className="mt-[0.65rem] mb-3 text-center text-[0.95rem] text-gray-600">
-              {t(locale, "WriteQuestions")}
-            </p>
+  const handlePDFSelect = async (pdf: any) => {
+    const formData = new FormData();
+    formData.append("url", pdf.url);  // Añade solo la URL como parámetro 'url'
+    console.log("PDF URL:", pdf.url);
 
-            {frequentQuestions(t, locale).map((question, index) => (
-              <div
+    try {
+      const response = await fetch('/api/generate-questions', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch questions from PDF");
+
+      const data = await response.json();
+      const questions = data.questions_and_answers;
+
+      const firstQuestion = questions[0];
+      const firstQuestionMessage = {
+        user: "chatbot",
+        message: firstQuestion.question,
+        options: firstQuestion.options,
+        type: "quiz"
+      };
+
+      setQuizQuestions(questions);
+      setChatLog([firstQuestionMessage]);
+      setCurrentQuestionIndex(0);
+    } catch (error) {
+      console.error('Error:', error);
+      setChatLog([{ user: "chatbot", message: "Error fetching questions from PDF" }]);
+    }
+  };
+
+  return (
+    <div className="relative h-full dark:bg-gray-900">
+      {history.length > 0 && (
+        <button onClick={handleBack} className="back-button bg-gray-200 dark:bg-gray-700 p-2 rounded-md m-2">
+          Back
+        </button>
+      )}
+
+      <div className="selections p-4">
+        {!selectedYear && (
+          <div className="years grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.keys(pdfs).map((year, index) => (
+              <Option
                 key={index}
-                className={`gray flex cursor-pointer items-center rounded-lg border bg-gray-300 py-5 px-10 text-gray-600 dark:border-black-800 dark:bg-black-600 dark:text-white ${index === frequentQuestions.length ? "" : "mb-4"
-                  }`}
-                onClick={() => setInput(question.question)}
-              >
-                {question.question} &nbsp;
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                  />
-                </svg>
-              </div>
+                label={year}
+                onClick={() => handleYearSelect(year)}
+                selected={selectedYear === year}
+              />
             ))}
           </div>
         )}
-
-        {renderChat && quizQuestions?.length > 0 && !quizCompleted && (
-          <div>
-            {chatLog.map((message: any, index) => {
-              if (message.user === "user") {
-                return <UserMessage key={index} message={message.message} time={""} />;
-              } else if (message.user === "chatbot") {
-                return (
-                  <ChatBotMessage
-                    key={index}
-                    message={message.message}
-                    time={message.time}
-                    options={message.options}
-                    type={message.type}
-                  />);
-              }
-            })}
+        {selectedYear && !selectedSubject && (
+          <div className="subjects grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.keys(pdfs[selectedYear]).map((subject, index) => (
+              <Option
+                key={index}
+                label={subject}
+                onClick={() => handleSubjectSelect(subject)}
+                selected={selectedSubject === subject}
+              />
+            ))}
           </div>
         )}
-
-
-        {renderChat && quizQuestions?.length === 0 && (
-          <div>
-            {chatLog.map((message: any, index: number) => {
-              const isUserMessage = message.user === "user";
-              if (isUserMessage) {
-                return (
-                  <UserMessage
-                    message={message.message}
-                    time={""}
-                    key={index}
-                  />
-                );
-              } else if (message.user === "chatbot") {
-                return (
-                  <ChatBotMessage
-                    key={index}
-                    message={cleanMessage(message.message)}
-                    time={""}
-                    conversationId={message.conversationId}
-                    messageId={message.messageId}
-                    error={message.error}
-                  />
-                );
-              }
-            })}
+        {selectedSubject && !selectedExamType && (
+          <div className="exam-types grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.keys(pdfs[selectedYear][selectedSubject]).map((examType, index) => (
+              <Option
+                key={index}
+                label={examType}
+                onClick={() => handleExamTypeSelect(examType)}
+                selected={selectedExamType === examType}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {renderSearchInput && (
-        <div className="relative">
-          <div className="h-[10%] w-full dark:bg-black-800">
-            <div className="relative mx-5">
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
+      {displayPDFs()}
 
-                  if (chatAvailable) {
-                    handleSubmitMessageChat(event);
-                    setChatAvailable(false);
-
-                    if (!initializedConversation || !newChatStarted) {
-                      setInitializedConversation(true);
-                      setNewChatStarted(true);
-                    }
-                    if (!typingEffect) {
-                      setTypingEffect(true);
-                    }
-                  }
-                }}
-              >
-                <div className="relative">
-                  <input
-                    type="file"
-                    id="file"
-                    name="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    ref={fileInputRef}
-                  />
-                  <span
-                    className="absolute inset-y-0 left-0 flex items-center pl-3 cursor-pointer"
-                    onClick={handleClipClick}
-                  >
-                    <img
-                      className="h-3 text-gray-400"
-                      src={CLIP}
-                      alt="clip icon"
-                    />
-                  </span>
-                  <input
-                    className={`${chatAvailable ? "bg-white" : "bg-gray-500"
-                      } w-full rounded-lg border bg-white py-3 pl-10 pr-16 text-blue-900 placeholder-gray-400 shadow-sm outline-none focus:border-blue-900 focus:shadow dark:border-black-800 dark:bg-black-700 dark:text-white dark:placeholder-gray-600`}
-                    type="text"
-                    placeholder={file ? file.name : t(locale, "WriteSomething")}
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                  />
-                </div>
-
-                <button
-                  className={`absolute right-0 top-0 flex h-full items-center gap-2 pr-5 cursor-pointer`}
-                  onClick={(event) => {
-                    handleSubmitMessageChat(event);
-                  }}
-                  disabled={!chatAvailable}
-                >
-                  {!isTypingChatbot && (
-                    <img
-                      className="h-[0.7rem]"
-                      src={SEND_ARROW}
-                      alt={t(locale, "Send")}
-                    />
-                  )}
-                  <span className="text-[0.9rem] text-gray-600">
-                    {isTypingChatbot ? (
-                      <span className="typing-dots">
-                        <span className="dot" />
-                        <span className="dot" />
-                        <span className="dot" />
-                      </span>
-                    ) : (
-                      t(locale, "Send")
-                    )}
-                  </span>
-                </button>
-              </form>
-            </div>
+      <div className={`${chatLog.length === 0 ? "hidden" : "block"} relative h-full overflow-y-scroll p-5 dark:bg-gray-800`} ref={chatContainerRef}>
+        {chatLog.map((entry: any, index: number) => (
+          <div key={index}>
+            {entry.user === "user" ? (
+              <UserMessage message={entry.message} />
+            ) : (
+              <ChatBotMessage message={entry.message} options={entry.options} onAnswer={handleAnswerQuestion} />
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
+
+      <div className="w-full p-3 bg-white shadow-inner fixed bottom-0 left-0 right-0 dark:bg-gray-800" style={{ height: '10%' }}>
+        <form onSubmit={handleSubmitMessageChat} className="flex items-center justify-between">
+          <label htmlFor="file-upload" className="cursor-pointer">
+            <img src={CLIP} alt="Attach file" className="inline-block h-6 w-6 mr-2 text-gray-600 dark:text-gray-200" />
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf, .doc, .txt" // Ajusta según los tipos de archivo que necesites aceptar
+            />
+          </label>
+          <button type="submit" className="ml-2 text-blue-500 dark:text-blue-400">
+            {isTypingChatbot ? (
+              <div className="dots">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
+            ) : (
+              <span>Enviar</span>
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
+
+const Option: React.FC<{ label: string; onClick: () => void; selected: boolean }> = ({ label, onClick, selected }) => (
+  <div
+    onClick={onClick}
+    className={`flex cursor-pointer items-center rounded-lg border bg-gray-300 py-5 px-10 text-gray-600 dark:border-gray-700 dark:bg-gray-600 dark:text-white ${selected ? "bg-gray-400 dark:bg-gray-500" : ""}`}
+  >
+    {label} &nbsp;
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="h-5 w-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+      />
+    </svg>
+  </div>
+);
 
 export default SectionChat;
