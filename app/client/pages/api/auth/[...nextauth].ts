@@ -16,7 +16,7 @@ export default NextAuth({
             if (account.provider === "google") {
                 const { name, email, image } = user;
                 try {
-                    const res = await fetch(${process.env.BACKEND_URL}/api/users, {
+                    const res = await fetch(`${process.env.BACKEND_URL}/api/users`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
