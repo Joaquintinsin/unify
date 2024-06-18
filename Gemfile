@@ -14,4 +14,7 @@ gem 'rtesseract'
 gem 'mini_magick'
 gem 'tesseract-ocr'
 gem 'google-cloud-vision'
-
+group :test do
+  gem 'rspec'
+  gem 'rack-test'
+end
