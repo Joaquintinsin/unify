@@ -379,7 +379,7 @@ const SectionChat: React.FC = () => {
                     </button>
                   </button>
 
-                  <button className="send">
+                  <button className="send" onClick={handleSubmitMessageChat}>
                     <div className="svg-wrapper-1">
                       <div className="svg-wrapper">
                         <svg

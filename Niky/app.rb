@@ -7,6 +7,7 @@ require 'dotenv/load'
 require 'pdf-reader'
 require 'openai'
 
+set :port, 5000
 
 get '/' do
     erb :index

@@ -16,7 +16,7 @@ export default NextAuth({
             if (account.provider === "google") {
                 const { name, email, image } = user;
                 try {
-                    const res = await fetch(`${process.env.BACKEND_URL}/api/users`, {
+                    const res = await fetch(`http://localhost:4567/api/users`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -30,12 +30,19 @@ export default NextAuth({
 
                     console.log("res", res);
 
+                    if (res.status === 404) {
+                        console.error("API endpoint not found");
+                        return false;
+                    }
+
                     if (res.status === 409) {
                         return true;
                     }
 
                     if (!res.ok) {
-                        throw new Error("Failed to create user");
+                        const errorMessage = await res.text();
+                        console.error("Failed to create user:", errorMessage);
+                        return false;
                     }
 
                     return true;
