@@ -1,5 +1,5 @@
 /* Imports React & Next.js */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { useRouter } from "next/router";
 
 // Importing components, functions and context providers
@@ -25,6 +25,7 @@ import { getAuthorizationCode } from "@/src/utils/functions";
 import { ShowShareChatPopupProvider } from "@/src/context/ShowShareChatContext";
 import { ShowSubscriptionToVersionPremiumProvider } from "@/src/context/ShowSubscriptionToVersionPremiumPopupContext";
 import SubscriptionToVersionPremiumPopup from "@/src/components/subscription-to-premium-version-popup/SubscriptionToVersionPremiumPopup";
+import SectionChat from "@/src/components/chat/section-chat";
 
 // Array of context providers
 const providers = [
@@ -44,7 +45,6 @@ const providers = [
 
 // Home function component
 export default function Home() {
-  // Wrapping the app with all the context providers
   const App = providers.reduceRight(
     (WrappedComponent, Provider) => {
       return <Provider>{WrappedComponent}</Provider>;
@@ -54,16 +54,17 @@ export default function Home() {
       <ShareChatPopup />
       <SubscriptionToVersionPremiumPopup />
 
-      <main className="relative w-screen">
-        <UserNavbar />
-
-        <div className="relative">
-          <Chat />
+      <main className="relative h-screen w-screen bg-gray-500">
+        <div className="fixed top-0 w-full z-50">
+          <UserNavbar />
+        </div>
+        <div className="pt-24">
+          <SectionChat />
         </div>
       </main>
+
     </>
   );
 
-  // Returning the wrapped app
   return App;
 }

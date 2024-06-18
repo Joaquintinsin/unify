@@ -1,4 +1,4 @@
-import { ETENDO_BOT, GREEN_CHECK } from "@/src/utils/constants";
+import { BOT, GREEN_CHECK } from "@/src/utils/constants";
 import React, { useEffect, useState } from "react";
 import t from "@/lang/locale";
 
@@ -55,12 +55,11 @@ const LoadingChatBotMessage = ({ messageReady }: any) => {
           <div className="slide-in flex items-center gap-3">
             {/* Render an image of the chat bot. */}
             <div
-              className={`flex items-center ${
-                !messageReady ? "etendo-bot h-10 w-10" : "h-6 w-6"
-              } relative`}
+              className={`flex items-center ${!messageReady ? "etendo-bot h-10 w-10" : "h-6 w-6"
+                } relative`}
             >
               <img
-                src={!messageReady ? ETENDO_BOT : GREEN_CHECK}
+                src={!messageReady ? BOT : GREEN_CHECK}
                 alt={t(locale, "EtendoBot")}
                 className="w-full"
               />

@@ -14,6 +14,8 @@ import {
   WHITE_CLOSE,
   SHOW_PASSWORD,
   HIDE_PASSWORD,
+  GOOGLE_ICON,
+  UNIFY_LOGOTYPE,
 } from "@/src/utils/constants";
 
 // function getServerSideProps using the withSessionSsr higher-order function for checks if the user is authenticated
@@ -59,58 +61,41 @@ const Login = () => {
       className="flex h-screen w-screen items-center justify-center bg-cover bg-center"
       style={{ backgroundImage: `url(${BACKGROUND_LOGIN})` }}
     >
-      {/* show the invalid credentials message if necessary */}
-      {showInvalidCredentialsMessage && (
-        <div className="absolute bottom-20 right-0 flex items-center gap-3 bg-red-500 py-3 px-5 font-medium text-white">
-          <img
-            className="mx-auto h-3 cursor-pointer"
-            src={WHITE_CLOSE}
-            alt={t(locale, "InvalidCredentials")}
-            onClick={() => setShowInvalidCredentialsMessage(false)}
-          />
-          <p>{t(locale, "InvalidCredentialsTryAgain")}</p>
-        </div>
-      )}
-
       <div className="w-full max-w-[34rem] rounded-[20px] bg-white px-14 pt-[4.25rem] pb-[4.25rem] shadow-sm">
         <div className="mb-6 text-center">
           {/* show the Etendo logotype */}
           <img
-            className="mx-auto h-[5rem]"
-            src={ETENDO_SQUARE_LOGOTYPE}
-            alt={t(locale, "EtendoLogotype")}
+            className="mx-auto h-32"
+            src={UNIFY_LOGOTYPE}
+            alt={"Unify Logotype"}
           />
           {/* show the "Welcome" text with stars */}
           <div className="flex items-end justify-center">
             <h1 className="mt-4 text-3xl font-medium text-blue-900">
-              {t(locale, "Welcome")}
+              Welcome
             </h1>
             <img className="h-8" src={STARS} alt={t(locale, "Stars")} />
           </div>
           {/* show the login screen message */}
           <p className="mt-[0.4rem] text-[1.1rem] text-gray-700">
-            {t(locale, "Enter your credentials to access your account.")}
+            Enter your credentials to access your account.
           </p>
         </div>
 
         <button
-          // when the button is clicked, call the handleLogin function
           onClick={handleSignIn}
-          className="mt-7 flex w-full items-center justify-center rounded-lg bg-blue-900 py-[0.825rem] text-[1.05rem] font-medium text-white"
+          className="mt-7 border shadow-sm border-blue-900 flex w-full items-center justify-center rounded-lg bg-white py-[0.825rem] text-[18px] font-medium text-black-200 transition duration-300 ease-in-out transform hover:translate-y-[-2px] hover:shadow-lg"
         >
-          {/* show the "Login" text */}
-          Iniciar Sesión con Google
-        </button>
-
-        <button
-          // when the button is clicked, call the handleLogin function
-          onClick={handleSignIn}
-          className="mt-7 flex w-full items-center justify-center rounded-lg bg-blue-900 py-[0.825rem] text-[1.05rem] font-medium text-white"
-        >
-          {/* show the "Login" text */}
-          Registrarse
+          <img
+            src={GOOGLE_ICON}
+            alt="Google Icon"
+            className="mr-2 h-8 w-8"
+          />
+          Sign in with Google
         </button>
       </div>
+
+
     </div>
   );
 };

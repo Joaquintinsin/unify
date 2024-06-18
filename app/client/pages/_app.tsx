@@ -4,6 +4,8 @@ import "@/styles/globals.css";
 import { ETENDO_FAVICON } from "@/src/utils/constants";
 import { useRouter } from "next/router";
 import t from "@/lang/locale";
+import "./index.css";
+
 
 export default function App({ Component, pageProps }: AppProps) {
   const { locale } = useRouter();

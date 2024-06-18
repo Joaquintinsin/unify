@@ -14,7 +14,7 @@ import {
   DARK_THEME,
   DEFAULT_USER,
   DOTS,
-  ETENDO_LOGOTYPE,
+  UNIFY_LOGOTYPE,
   ETENDO_WHITE_LOGOTYPE,
   LIGHT_THEME,
   SETTINGS,
@@ -103,18 +103,7 @@ const UserNavbar = () => {
       });
   };
 
-  // Function to switch theme mode
-  const switchMode = () => {
-    setDarkMode(!darkMode);
-    const darkModeStorage = localStorage.getItem("darkMode") === "true";
-    if (darkModeStorage) {
-      localStorage.removeItem("darkMode");
-      window.document.documentElement.classList.remove("dark");
-    } else {
-      localStorage.setItem("darkMode", "true");
-      window.document.documentElement.classList.add("dark");
-    }
-  };
+
 
   // update password
   const handleUpdatePassword = () => {
@@ -139,46 +128,19 @@ const UserNavbar = () => {
   // this component returns the user navbar
   return (
     // this is a navbar with a logo and components on the left and right side
-    <nav className="flex h-[10%] items-center justify-between border-b border-gray-400 bg-white px-8 py-4 dark:border-black-800 dark:bg-black-700">
+    <nav className="flex items-center justify-between border-b border-gray-400 bg-white px-8 py-2">
       {/* logo in the left */}
       <div>
         {!darkMode && <Image
           height={80}
           width={80}
-          src={ETENDO_LOGOTYPE}
+          src={UNIFY_LOGOTYPE}
           alt={t(locale, "EtendoLogotype")}
         />}
       </div>
 
       {/* components in the right */}
       <div className="flex items-center gap-5">
-        {/* a container with a light theme icon, a switch component, and a dark theme icon */}
-        <div className="flex items-center gap-2">
-          <Image
-            height={20}
-            width={20}
-            src={LIGHT_THEME}
-            alt={t(locale, "Sun")}
-          />
-          {/* switch component that changes the dark mode state when clicked */}
-          <div
-            className="flex h-5 w-9 cursor-pointer rounded-full bg-gray-400"
-            onClick={switchMode}
-          >
-            {/* the actual switch that moves based on the dark mode state */}
-            <div
-              className={`h-5 w-5 transform rounded-full bg-gray-600 transition-transform ${darkMode ? "translate-x-4" : "translate-x-0"
-                }`}
-            />
-          </div>
-          <Image
-            height={16}
-            width={16}
-            src={DARK_THEME}
-            alt={t(locale, "Moon")}
-          />
-        </div>
-
         {/* container with the user's name and picture */}
         <div className="relative flex items-center gap-2">
           <p className="text-[0.9rem] text-gray-600">
@@ -233,24 +195,6 @@ const UserNavbar = () => {
                   </div>
                 </div>
               </div>
-
-              <a
-                className="flex flex-col border-b border-b-gray-300 px-2 no-underline transition  duration-700 hover:bg-blue-200 dark:border-black-800 dark:border-b-black-800 dark:text-black-300 dark:hover:bg-black-800"
-                onClick={handleUpdatePassword}
-                rel="noopener noreferrer"
-              >
-                <div className="mx-2 my-3 flex cursor-pointer items-center gap-2">
-                  <Image
-                    height={16}
-                    width={16}
-                    src={darkMode ? SETTINGS_DARK : SETTINGS}
-                    alt={t(locale, "Settings")}
-                  />
-                  <h4 className="text-[0.875rem] font-medium text-blue-900 dark:text-black-300">
-                    {t(locale, "UpdatePassword")}
-                  </h4>
-                </div>
-              </a>
 
               <h4
                 onClick={handleLogout}

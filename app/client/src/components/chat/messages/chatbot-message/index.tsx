@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { DEFAULT_USER } from "@/src/utils/constants";
 import t from "@/lang/locale";
 
-const ChatBotMessage = ({ message, time, options, type, onAnswer }) => {
+const ChatBotMessage = ({ message, time, options, type, onAnswer }: any) => {
   const { locale } = useRouter();
   console.log("ChatBotMessage -> locale", locale)
   console.log("ChatBotMessage -> message", message)
@@ -11,7 +11,7 @@ const ChatBotMessage = ({ message, time, options, type, onAnswer }) => {
   console.log("ChatBotMessage -> options", options)
 
   // Function to handle click on quiz options
-  const handleOptionClick = (option) => {
+  const handleOptionClick = (option: any) => {
     // Call the provided onAnswer function with the selected option
     onAnswer(option);
   };
