@@ -11,7 +11,8 @@ require 'pdf-reader'
 require 'openai'
 require 'base64'
 require 'open-uri'
-require_relative '../app.rb'
+require 'spec_helper'
+require_relative '../app'
 
 ENV['RACK_ENV'] = 'test'
 

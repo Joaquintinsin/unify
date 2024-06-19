@@ -11,7 +11,8 @@ require 'pdf-reader'
 require 'openai'
 require 'base64'
 require 'open-uri'
-require_relative '../app.rb'
+require 'spec_helper'
+require_relative '../app'
 
 ENV['RACK_ENV'] = 'test'
 
@@ -22,8 +23,23 @@ describe 'API /api/users' do
     Sinatra::Application
   end
 
-  # ver pq falla, espera 201 y recibe 500
-  context 'When all parameters are provided' do
+  def db_connection
+    PG.connect(
+      host: ENV['DB_HOST'],
+      dbname: ENV['DB_NAME'],
+      user: ENV['DB_USER'],
+      password: ENV['DB_PASSWORD']
+    )
+  end
+
+  before(:each) do
+    db_connection do |conn|
+      conn.exec('TRUNCATE Users RESTART IDENTITY CASCADE')
+    end
+  end
+
+  # Hay problemas con la base de datos, debe haber conflictos entre docker y postgres, o las gemas, algo...
+  context 'when all parameters are provided' do
     let(:valid_params) do
       {
         username: 'testuser',
@@ -32,44 +48,49 @@ describe 'API /api/users' do
       }.to_json
     end
 
-    it 'Creates a new user and returns a 201 status code' do
+    it 'registers a new user and returns a 201 status code if user does not exist' do
       post '/api/users', valid_params, { 'CONTENT_TYPE' => 'application/json' }
+      puts last_response.body  # Añadir log para depurar
       expect(last_response.status).to eq(201)
-      expect(last_response.body).to include('User created successfully')
+      expect(last_response.body).to include('Register an account successfully')
+    end
+
+    it 'logs in an existing user and returns a 200 status code if user already exists' do
+      db_connection do |conn|
+        conn.exec_params('INSERT INTO Users (email, username, profilePicture) VALUES ($1, $2, $3)',
+                         ['test@example.com', 'testuser', 'https://www.vecteezy.com/png/20911740-user-profile-icon-profile-avatar-user-icon-male-icon-face-icon-profile-icon'])
+      end
+      post '/api/users', valid_params, { 'CONTENT_TYPE' => 'application/json' }
+      puts last_response.body  # Añadir log para depurar
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to include('Login into an existing account')
     end
   end
 
-  # ver si ahora se arreglo, poniendo el codigo del app.rb aca para inicializar la bd etc
-  context 'When email already exists' do
-    before do
-      def db_connection
-        begin
-          connection = PG.connect(DB_SETTINGS)
-          yield(connection)
-        ensure
-          connection.close if connection
-        end
-      end
-      # Cargo primero un test@example.com en la base asi simulo tener alguno cargado de antemano
-      db_connection do |conn|
-        conn.transaction do
-            conn.exec_params('INSERT INTO Users (email, username, profilePicture) VALUES ($1, $2, $3)', ['test@example.com', 'testuser2', 'https://www.vecteezy.com/png/20911740-user-profile-icon-profile-avatar-user-icon-male-icon-face-icon-profile-icon'])
-        end
-      end
+  context 'when parameters are missing' do
+    it 'returns a 400 status code with an error message' do
+      post '/api/users', {}.to_json, { 'CONTENT_TYPE' => 'application/json' }
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include('Missing parameters')
     end
 
-    let(:duplicate_email_params) do
-      {
-        username: 'testuser2',
-        profilePicture: 'https://www.vecteezy.com/png/20911740-user-profile-icon-profile-avatar-user-icon-male-icon-face-icon-profile-icon',
-        email: 'test@example.com'
-      }.to_json
+    it 'returns a 400 status code if username is missing' do
+      post '/api/users', { email: 'test@example.com', profilePicture: 'https://www.vecteezy.com/png/20911740-user-profile-icon-profile-avatar-user-icon-male-icon-face-icon-profile-icon' }.to_json, { 'CONTENT_TYPE' => 'application/json' }
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include('Missing parameters')
     end
 
-    it 'Returns a 409 status code with an error message' do
-      post '/api/users', duplicate_email_params, { 'CONTENT_TYPE' => 'application/json' }
-      expect(last_response.status).to eq(409)
-      expect(last_response.body).to include('Email already exists')
+    it 'returns a 400 status code if profilePicture is missing' do
+      post '/api/users', { email: 'test@example.com', username: 'testuser' }.to_json,
+           { 'CONTENT_TYPE' => 'application/json' }
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include('Missing parameters')
+    end
+
+    it 'returns a 400 status code if email is missing' do
+      post '/api/users', { username: 'testuser', profilePicture: 'https://www.vecteezy.com/png/20911740-user-profile-icon-profile-avatar-user-icon-male-icon-face-icon-profile-icon' }.to_json, { 'CONTENT_TYPE' => 'application/json' }
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include('Missing parameters')
     end
   end
 end
