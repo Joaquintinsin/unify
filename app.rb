@@ -89,6 +89,7 @@ post '/api/generate-questions' do
     logger.info "Response: #{response.inspect}"
 
     response_content = response['choices'][0]['message']['content'].strip
+
     response_content.gsub!(/^```json\n/, '')
     response_content.gsub!(/\n```$/, '')
 
@@ -98,11 +99,11 @@ post '/api/generate-questions' do
     json questions_and_answers: structured_response
   rescue JSON::ParserError => e
     logger.error "Failed to parse JSON response: #{e.message}"
-    status 500
+    status 502
     return json error: 'Failed to parse JSON response'
   rescue StandardError => e
     logger.error "Failed to generate quiz: #{e.message}"
-    status 500
+    status 503
     return json error: 'Failed to generate quiz'
   end
 end

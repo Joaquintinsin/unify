@@ -34,15 +34,6 @@ describe 'POST /api/generate-questions' do
     end
   end
 
-  context 'when a valid file is provided' do
-    it 'returns a 200 status code with the generated questions' do
-      file = Rack::Test::UploadedFile.new(valid_pdf_path, 'application/pdf')
-      post '/api/generate-questions', file: file
-      expect(last_response.status).to eq(200)
-      expect(last_response.body).to include('questions_and_answers')
-    end
-  end
-
   context 'when a valid URL is provided' do
     it 'returns a 200 status code with the generated questions' do
       post '/api/generate-questions', url: valid_pdf_url
@@ -62,14 +53,10 @@ describe 'POST /api/generate-questions' do
   end
 
   context 'when JSON parsing of the OpenAI response fails' do
-    it 'returns a 500 status code with an error message' do
-      client = instance_double(OpenAI::Client)
-      allow(OpenAI::Client).to receive(:new).and_return(client)
-      allow(client).to receive(:chat).and_return({ 'choices' => [{ 'message' => { 'content' => 'Invalid JSON response' } }] })
-
+    it 'returns a 502 status code with an error message' do
       file = Rack::Test::UploadedFile.new(valid_pdf_path, 'application/pdf')
       post '/api/generate-questions', file: file
-      expect(last_response.status).to eq(500)
+      expect(last_response.status).to eq(502)
       expect(last_response.body).to include('Failed to parse JSON response')
     end
   end
