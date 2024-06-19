@@ -89,7 +89,6 @@ post '/api/generate-questions' do
     logger.info "Response: #{response.inspect}"
 
     response_content = response['choices'][0]['message']['content'].strip
-    # Eliminar el bloque de código delimitador si existe
     response_content.gsub!(/^```json\n/, '')
     response_content.gsub!(/\n```$/, '')
 

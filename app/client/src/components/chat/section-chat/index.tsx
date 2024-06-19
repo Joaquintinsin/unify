@@ -59,9 +59,9 @@ const SectionChat: React.FC = () => {
           return prevPercentage + 1;
         }
         clearInterval(interval);
-        return 250;
+        return 100;
       });
-    }, 250);
+    }, 300);
 
     return () => clearInterval(interval);
   }, []);
@@ -214,6 +214,8 @@ const SectionChat: React.FC = () => {
     } catch (error) {
       console.error("Error:", error);
       setChatLog([{ user: "chatbot", message: t(locale, "Error fetching questions") }]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
