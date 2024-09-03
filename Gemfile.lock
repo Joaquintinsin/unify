@@ -11,6 +11,7 @@ GEM
       refining
     date (3.3.4)
     diff-lcs (1.5.1)
+    docile (1.4.1)
     dotenv (3.1.2)
     event_stream_parser (1.0.0)
     faraday (2.9.1)
@@ -134,6 +135,12 @@ GEM
       faraday (>= 0.17.5, < 3.a)
       jwt (>= 1.5, < 3.0)
       multi_json (~> 1.10)
+    simplecov (0.22.0)
+      docile (~> 1.1)
+      simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
+    simplecov-html (0.12.3)
+    simplecov_json_formatter (0.1.4)
     sinatra (3.2.0)
       mustermann (~> 3.0)
       rack (~> 2.2, >= 2.2.4)
@@ -176,6 +183,7 @@ DEPENDENCIES
   rspec
   rtesseract
   ruby-openai
+  simplecov
   sinatra
   sinatra-contrib
   sinatra-cors
